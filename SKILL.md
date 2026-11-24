@@ -1,0 +1,70 @@
+---
+name: interactive-approval-desk
+description: Design and generate self-contained interactive HTML proposal and architecture approval desks with a round-level interactive sandbox for rounds about structure (panorama, a swimlane per flow, a view per entity, an object table), a short visible layer per card (four decision boxes, comparison grids, decision trees, flows, sequence and before/after diagrams drawn from data, everything else folded), zero-overlap SVG diagrams, plain-language explanations, hover glossary tooltips, per-item decision controls, and a Markdown feedback export that is guaranteed to land in the project review folder (hosted Artifact + db). Use when the user asks to present a proposal, architecture draft, PRD, information flow, or iterative review round (e.g. R01, R02) as a visual, interactive HTML page for review, approval, and feedback collection.
+---
+
+# Interactive Approval Desk
+
+Build self-contained, zero-jargon interactive HTML approval desks that translate complex system architectures, product proposals, or multi-round design iterations into visual diagrams and structured review items, then export a mapped Proposal-to-Feedback Markdown document (`.md`) for the next iteration. Pages are always built from `round_template/` (data + cfg → `build.py`); this file holds the workflow and the hard rules, and the table near the end says where each detail lives.
+
+## When to Use
+
+- The user wants to review, confirm, or give item-by-item feedback on a complex proposal, system architecture, information flow, or specification.
+- The user asks for a visual, interactive HTML page to understand a design from scratch without getting lost in jargon or dense tables.
+- You are running an iterative human-in-the-loop review workflow (such as Round R01, R02, v0.1, v0.2) where the user needs to approve rules, vote on open design choices, add comments, and export a structured feedback file back to the agent.
+- An existing diagram or proposal page has overlapping labels, crossed wires, or unclear entity relationships and needs visual refactoring.
+
+## Core Design Philosophy
+
+1. **Zero-to-One Plain-Language Onboarding**: Assume the reviewer is busy or reading from scratch. Lead with the high-level mental model and version deltas before diving into granular items.
+2. **Strict Separation of Visual Perspectives**: Never cram all entities, flows, and edge labels onto a single static spiderweb diagram. Split complex topologies into complementary interactive views (Planar Panorama, Dedicated 3-Column Swimlane per Flow, and Single-Entity Ego-Network). (v3.7.1) This round-level sandbox is required whenever a round is about structure: which things exist, who produces, changes or can see them, and how they flow. Card pictures (principle 8) show one card's decision and link to the sandbox; they never replace it. A round without a sandbox says why (`NO_SANDBOX`).
+3. **Mathematical Zero-Overlap Guarantee**: Eliminate diagonal lines that cut across intermediate boxes and midpoint labels that collide in the center. Route cross-column edges through dedicated obstacle-free corridors using straight horizontal tracks or double-Bezier horizontal pill tangents.
+4. **progressive Jargon Disclosure**: Express core logic in plain everyday language. Wrap every unavoidable domain term or code in an inline hover tooltip linked to a bottom glossary appendix.
+5. **Every Code Explains Itself (v3.2)**: Any ID-style code that appears in the page — decision / fact / source / question / assumption IDs (`D-009`, `F-002`, `S-08`, `Q-16`, `A-02`), review item IDs from any round (`R03-07`), round and turn IDs (`R01`, `T04`), metric and signal codes (`M5`, `R3`), spec IDs (`INV-04`, `FR-TASK-04`, `NFR-01`), and local table labels (`N1`, `K2`, `P4`, `X7`, `F1` flows) — MUST be rendered as a hover-explained link to a "代号索引" (code index) appendix. The reviewer must never have to hunt for what a code means. Unknown codes are a build failure, not a cosmetic issue.
+6. **One Decision, Full Context (v3.3)**: The reviewer must be able to decide from the card alone — since v3.7 from its visible layer, with the full context folded on the same card. Never pack several independent decisions into one table row or one item that can only be approved as a whole; never ask the reviewer to "write the numbers you disagree with". Group related decisions by topic, give the topic's full context first, then list one decision per point with its own controls (see `references/review-cards.md`).
+7. **Every Answer Is the Reviewer's Own (v3.4)**: Nothing is pre-answered. A point or item stays "待你表态" until the reviewer clicks; bulk shortcuts are explicit clicks and are labelled on the point or card ("本组批量同意" / "全页一键通过", also in the export), so a reviewer who comes back after an interruption can tell what they decided from what was filled in for them.
+8. **Short Visible Layer (v3.7)**: Paragraphs are the last resort. A card leads with four boxes — what you decide, my recommendation and what you give up (side by side, same size), the honest admission when there is one, and what happens if you disagree — then at most two pictures drawn from data (criterion comparison, decision tree, threshold, steps, sequence, before/after, quantities) and options that each show their upside, cost, consequence and way back. Every paragraph of the reasoning stays on the card, folded, unchanged. A fact that would change the decision is never only in a fold; a number never appears without its assumption; a picture never shows one side only. `test.js` enforces a visible-text budget per card (see `references/review-cards.md`, "Low Reading Load").
+9. **Closed-Loop Feedback Persistence and Export**: Every item has explicit answer controls (status buttons, option cards or per-point buttons, depending on its kind) and a free-text comment box, backed by `localStorage`, and the page exports a deterministic Markdown report (no JSON) that pairs the original proposal with the user's decision.
+
+## Workflow
+
+`<skill>` is this folder (in a project, usually its pinned copy). Run the commands in the project's build folder, next to the round's cfg and data.
+
+1. **Write the round as data.** A data file (`data_rXX.js`; required globals `ROUND`, `TOPIC`, `ITEMS`, everything else optional) and a cfg (`cfg_rXX.json`; required `ROUND`, `TOPIC`, `data`, `PROJECT`). Decide the sandbox before the cards: a round about structure (which things exist, who produces, changes or can see them, and how they flow) gets `OBJ` (the object table and one view per entity) plus `FLOWS` (one swimlane per flow) or `PANO_EDGES` (the links the object views draw). Only the hand-placed panorama `viewAll()` needs coordinates, and it is optional. Cards then draw only their own slice, and a card links to the sandbox with `view` when one view shows its whole context. A round without a sandbox sets `NO_SANDBOX` to a one-line reason, which the page shows (`references/page-and-export.md`, "When a Round Gets a Sandbox"). Design every card with `references/review-cards.md`: the four boxes (`brief`), pictures (`vis`), options with both sides, diff-style points, and a page `BRIEF`; keep the full prose in `plain` / `context` / `evidence`, which fold automatically. Generate the code registry with `python3 <skill>/scripts/build_codes.py --out codes.js [--shapes code_shapes.json] <registry .md files…>` (most authoritative file first) and add page-local labels with `Object.assign(CODES, {...})` in the data. Project wording, paths and styling go into cfg/data (`INTRO`, `REVIEW_DIR`, `PAGE_TEXT`, `OBJ_LABELS`, `CSS_FILE`, …), never into the template. Every field: `round_template/README.md`; working examples: `round_template/sample/`.
+2. **Build.** `python3 <skill>/round_template/build.py cfg_rXX.json` writes `{ROUND}_{TOPIC}_proposal.html` (complete document, the local copy) and `{ROUND}_{TOPIC}_artifact.html` (for the Artifact tool). Read its notes: unknown cfg keys, missing `REVIEW_DIR`, a `PROPOSAL_FILE` that differs from the output name.
+3. **Verify.** `NODE_PATH=<node_modules with playwright> node <skill>/round_template/test.js {ROUND}` must end with `✓ 全部通过` (layout, codes, data lint, visible-text budgets, legibility, neutral recommendation, storage-key prefix, hosted mode, local export, phone widths, page errors — the full list is in `references/page-and-export.md`). Then run the two-pass approver cold read (`references/review-cards.md`, point 6) and revise until no card blocks a decision and the second pass changes nothing. When you draw boxes yourself (`viewAll()`, item figures), follow the geometry rules in `references/svg-layout-and-visual-patterns.md`.
+4. **Publish and collect feedback.** Publish `{ROUND}_{TOPIC}_artifact.html` with `capabilities: {db: {}, downloads: true}`, run `ArtifactData list feedback` once to confirm the store works, and give the user the artifact card, not a local file link. Keep the local copy at `{REVIEW_DIR}/{ROUND}_{TOPIC}_proposal.html`, the artifact build in `{REVIEW_DIR}/artifact/`, and the artifact URL in `{REVIEW_DIR}/INDEX.md`. While the user reviews, their draft (progress and partial Markdown) is at `ArtifactData get collection=drafts doc_id={ROUND}`. When the user says “反馈完成”, read `ArtifactData get collection=feedback doc_id={ROUND}` and write its `md` verbatim to `{REVIEW_DIR}/{ROUND}_{TOPIC}_feedback.md`.
+
+## Hard Rules
+
+- **Markdown only** — never export or offer JSON.
+- **Keys stay stable across rounds**: browser storage key `{PROJECT}/{ROUND}-feedback-v1` (bump the data's `KEY` to `{ROUND}-feedback-v2` only when item meanings change after publishing; hosted drafts follow the key, so old answers are dropped too), feedback file `{ROUND}_{TOPIC}_feedback.md`, db docs `feedback/{ROUND}` and `drafts/{ROUND}`. `PROJECT` keeps local pages of different projects from sharing answers.
+- **Nothing pre-answered** (principle 7); bulk actions are explicit and labelled; a group whose points trade away the reviewer's own priorities gets `bulk: false`.
+- **Short visible layer, full record** (principle 8): stay within the budgets by moving prose into folds, never by deleting it or softening an admission; nothing decision-changing lives only in a fold, a hover title or a glyph.
+- **No silent sandbox (v3.7.1)**: a round about structure has a sandbox; a round without one says why in `NO_SANDBOX`. Never draw the same objects as `layers` / `flow` / `seq` pictures on several cards instead of one sandbox. The page always tells the reviewer when there is no sandbox (how-to step 2), and the lint warns on every round that has neither a sandbox nor a reason, naming the cards that use those picture types.
+- **Unknown codes fail the build**: fix them by adding entries to `CODES`, never by rewording the page to hide the code.
+- **Do not publish a page whose `test.js` run did not pass.**
+- **Back up before replacing**: if a proposal file already exists in the review folder, back it up to `<filename>.backup.html` first.
+- **Change the template upstream**: if a project needs something the template cannot express, extend `round_template/` in this skill instead of string-patching a copy.
+
+## Where the Details Are
+
+| Need | Read |
+|---|---|
+| Every cfg field, data global, v3.7 field shape and limit, `PAGE_TEXT` id, the sandbox shapes with a minimal example, and the upgrade notes from v3.7, v3.6 and v3.4 | `round_template/README.md` |
+| How to choose card kinds, write the four boxes, pick a picture, write points as diffs, fold explanations, run the two-pass cold read | `references/review-cards.md` |
+| The page modules (page brief, sandbox and object table, route, cards), when a round gets a sandbox, the three export paths, hosted-mode drafts and saving, what `test.js` checks | `references/page-and-export.md` |
+| SVG coordinates and the four zero-overlap rules | `references/svg-layout-and-visual-patterns.md` |
+| Pitfalls met in earlier rounds | `references/gotchas.md` |
+| Version history and the reason for each change | `CHANGELOG.md` |
+
+## Bundled Files
+
+- `round_template/`: the only page template (`page.src.html`); `build.py` (cfg + data → proposal and artifact pages); `test.js` (headless self-test, exit code 1 on failure); `dumptext.js` (two-pass text dump for the cold read); `README.md` (cfg fields, data contract, v3.7 fields, upgrade notes); `sample/` (R01: sandbox, most modules and every v3.7 field; R02: no sandbox, with its reason in `NO_SANDBOX`, and previous-round handling).
+- `scripts/build_codes.py --out codes.js [--shapes code_shapes.json] FILES…`: build the `CODES` registry (plus `CODE_SHAPES` when `--shapes` is given) from Markdown tables (first column is a code), bold headings (`**FR-XXX-01 标题**`), list items (`- N1 …`) and feedback headings (`### R03-07 标题`); tags each code with a category (已批准决定, 风险信号, …).
+- `assets/code-linker.js`, `assets/export-module.js`: shared modules that `build.py` inlines (`adLinkCodes`, `adRenderCodeIndex`, `adCodeTip`; the Markdown export with hosted drafts, saving through `downloads`, local folder and download fallback).
+- `scripts/patch_export.py <page.html> assets/export-module.js`: upgrade a page built by hand or before v3 to the current export module (md only; idempotent).
+- `scripts/to_artifact.py <page.html> <out.html>`: strip doctype/html/head/body from a hand-written page so it can be published with the Artifact tool (`build.py` already writes `_artifact.html`).
+- `scripts/verify_svg_collisions.py`: geometric self-test of the reference coordinates in `references/svg-layout-and-visual-patterns.md` (pill-node, pill-pill, track-node, track-pill); it does not read a page, because the template draws its SVG in the browser — pages are checked by `round_template/test.js`.
+- `references/`: `review-cards.md`, `page-and-export.md`, `svg-layout-and-visual-patterns.md`, `gotchas.md` (see the table above).
+- `archive/`: retired files (the pre-v3.3 skeleton template and the legacy string-patching round builders). Not part of the skill and not included in this public repository.

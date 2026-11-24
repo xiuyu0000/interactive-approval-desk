@@ -1,0 +1,1966 @@
+<title>{{PAGE_TITLE}}</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+/* 布局：顶部吸附导航 + 单列分节（从零看懂 → 沙盘 → 对象表 → 条目（开头是审批路线）→ 附录 → 提交），沿用 approval_desk 的蓝紫识别色 */
+:root {
+  --bg: #f6f8fb; --surface: #ffffff; --surface-alt: #eef2f7;
+  --border: #dfe5ee; --border-strong: #c3ccd9;
+  --text: #0f172a; --text-2: #445066; --text-3: #5d6982;
+  --accent: #2f5bd8; --accent-2: #5b47d6; --accent-bg: #eef3ff; --accent-border: #a9bdf5;
+  --agent: #6d3fd0; --agent-bg: #f4f0ff; --agent-border: #cdbcf6;
+  --goal: #a35b06; --goal-bg: #fff7e6; --goal-border: #f2cf7f;
+  --ok: #0f9f6e; --warn: #d98a06; --bad: #dc3b3b; --ok-bg: #e8f8f1; --warn-bg: #fff4e0; --bad-bg: #fdecec;
+  --stage: #0b1120; --stage-2: #0f172a; --stage-line: #1e293b; --stage-text: #e2e8f0; --stage-muted: #94a3b8;
+  --tip-bg: #0f172a; --tip-fg: #f8fafc;
+  --font-body: "Noto Sans SC", -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+  --font-display: "Noto Serif SC", "Songti SC", "STSong", serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --radius: 10px; --radius-lg: 14px;
+  --field-bg: #f8fafd; --field-focus: rgba(47,91,216,.16);
+  /* v3.7：状态色的文字版（浅底上至少 4.5:1）和实心版（上面放 --on-solid 的字）；A/B 两个选项的识别色（中性，不用绿、黄、红） */
+  --warn-text: #8a5300; --ok-text: #0b7a55; --bad-text: #b42323;
+  --ok-solid: #0b7a55; --warn-solid: #9a5d00; --bad-solid: #c42d2d; --on-solid: #ffffff; --on-accent: #ffffff;
+  --va: #2f6fd0; --va-bg: #e9f0fc; --vb: #8b4bc7; --vb-bg: #f4ecfb;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0d1220; --surface: #141b2d; --surface-alt: #1b2438; --border: #273250; --border-strong: #36446a;
+  --text: #e8edf7; --text-2: #b4bfd6; --text-3: #8b97b2;
+  --accent: #7e9cf5; --accent-2: #9d8cf2; --accent-bg: #1a2546; --accent-border: #35508f;
+  --agent: #b79cf5; --agent-bg: #231c3d; --agent-border: #4b3b80;
+  --goal: #f2c062; --goal-bg: #2c2412; --goal-border: #6b5520;
+  --ok: #34c88f; --warn: #f0a83a; --bad: #f06a6a; --ok-bg: #12301f; --warn-bg: #33270f; --bad-bg: #351616;
+  --tip-bg: #e8edf7; --tip-fg: #0f172a; --field-bg: #10172a; --field-focus: rgba(126,156,245,.22); --warn-text: #f0a83a; --ok-text: #34c88f; --bad-text: #f06a6a; --ok-solid: #34c88f; --warn-solid: #f0a83a; --bad-solid: #f06a6a; --on-solid: #0d1220; --on-accent: #0d1220; --va: #7ea6f2; --va-bg: #1a2a4a; --vb: #c39af0; --vb-bg: #2a1f40; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #0d1220; --surface: #141b2d; --surface-alt: #1b2438; --border: #273250; --border-strong: #36446a;
+  --text: #e8edf7; --text-2: #b4bfd6; --text-3: #8b97b2;
+  --accent: #7e9cf5; --accent-2: #9d8cf2; --accent-bg: #1a2546; --accent-border: #35508f;
+  --agent: #b79cf5; --agent-bg: #231c3d; --agent-border: #4b3b80;
+  --goal: #f2c062; --goal-bg: #2c2412; --goal-border: #6b5520;
+  --ok: #34c88f; --warn: #f0a83a; --bad: #f06a6a; --ok-bg: #12301f; --warn-bg: #33270f; --bad-bg: #351616;
+  --tip-bg: #e8edf7; --tip-fg: #0f172a; --field-bg: #10172a; --field-focus: rgba(126,156,245,.22); --warn-text: #f0a83a; --ok-text: #34c88f; --bad-text: #f06a6a; --ok-solid: #34c88f; --warn-solid: #f0a83a; --bad-solid: #f06a6a; --on-solid: #0d1220; --on-accent: #0d1220; --va: #7ea6f2; --va-bg: #1a2a4a; --vb: #c39af0; --vb-bg: #2a1f40; color-scheme: dark }
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--text); font-family: var(--font-body); font-size: 15px; line-height: 1.7; margin: 0; padding-bottom: 80px; }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--surface); }
+h1, h2, h3 { font-family: var(--font-display); text-wrap: balance; line-height: 1.35; margin: 0; }
+h2 { font-size: 22px; } h3 { font-size: 17px; }
+p { margin: 0; }
+[hidden] { display: none !important; }
+a { color: var(--accent); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.top { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 50; background: color-mix(in srgb, var(--surface) 94%, transparent); backdrop-filter: blur(10px); border-bottom: 1px solid var(--border); }
+.top-in { max-width: 1320px; margin: 0 auto; padding-block: 10px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: flex; align-items: center; justify-content: space-between; gap: 10px 14px; flex-wrap: wrap; }
+.brand { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.badge-round { background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: #fff; font-weight: 800; font-size: 13px; padding: 4px 10px; border-radius: 7px; letter-spacing: .04em; }
+.brand strong { font-family: var(--font-display); font-size: 16px; }
+.nav-pills { display: flex; gap: 4px; flex-wrap: wrap; }
+.nav-pills a { font-size: 12.5px; color: var(--text-2); text-decoration: none; padding: 3px 9px; border-radius: 99px; border: 1px solid transparent; }
+.nav-pills a:hover { border-color: var(--border-strong); }
+.top-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.progress { display: flex; align-items: center; gap: 8px; background: var(--surface-alt); padding: 5px 11px; border-radius: 99px; font-size: 12.5px; font-weight: 700; border: 1px solid var(--border); font-variant-numeric: tabular-nums; }
+.draft-state { font-weight: 600; color: var(--text-3); font-size: 11.5px; }
+.draft-state:empty { display: none; }
+.pbar { width: 90px; height: 7px; background: var(--border); border-radius: 99px; overflow: hidden; }
+.pbar > div { height: 100%; width: 0; background: linear-gradient(90deg, var(--ok), var(--accent)); transition: width .3s; }
+.btn { display: inline-flex; align-items: center; gap: 6px; padding: 7px 12px; border-radius: 8px; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; border: 1px solid var(--border-strong); background: var(--surface); color: var(--text); }
+.btn:hover { border-color: var(--accent); }
+.btn-primary { background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: var(--on-accent); border: none; }
+.wrap { max-width: 1320px; margin: 0 auto; padding-block: 22px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: grid; gap: 22px; }
+.sec { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 24px; display: grid; gap: 16px; min-width: 0; }
+.sec-head { display: grid; gap: 6px; }
+.eyebrow { font-size: 12px; font-weight: 700; letter-spacing: .12em; color: var(--accent); text-transform: uppercase; }
+.lead { color: var(--text-2); max-width: 72ch; }
+.lead p + p { margin-top: 8px; }
+.term { color: var(--accent); font-weight: 600; text-decoration: none; border-bottom: 1.5px dashed var(--accent-border); cursor: help; }
+.code { font-family: var(--font-mono); font-size: max(12px, .92em); font-weight: 700; color: var(--agent); text-decoration: none; border-bottom: 1.5px dotted var(--agent-border); cursor: help; white-space: nowrap; }
+.fig-table .code, .chipflow .code, .spot .code { color: #d8b4fe; border-bottom-color: #7c3aed; }
+.ci { display: grid; grid-template-columns: 96px 1fr; gap: 10px; font-size: 13.5px; border-bottom: 1px solid var(--border); padding: 6px 0; scroll-margin-top: 90px; }
+.ci b { font-family: var(--font-mono); color: var(--agent); }
+.ci span { min-width: 0; overflow-wrap: anywhere; }
+.ci i { display: block; font-style: normal; color: var(--text-3); font-size: 12px; }
+.ci:target { background: var(--agent-bg); }
+#code-index { display: grid; }
+#tip { position: fixed; z-index: 9999; width: 330px; max-width: calc(100vw - 24px); background: var(--tip-bg); color: var(--tip-fg); padding: 12px 14px; border-radius: 10px; pointer-events: none; opacity: 0; transition: opacity .12s; font-size: 13px; line-height: 1.6; box-shadow: 0 10px 30px rgba(0,0,0,.25); }
+#tip.on { opacity: 1; } #tip b { display: block; margin-bottom: 4px; } #tip i { display: block; margin-top: 6px; opacity: .8; font-style: normal; }
+/* 从零看懂 */
+.howto { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 10px; }
+.howto div { background: var(--surface-alt); border-radius: var(--radius); padding: 12px 14px; font-size: 13.5px; color: var(--text-2); }
+.howto b { display: block; color: var(--text); font-size: 13px; margin-bottom: 2px; }
+.where { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 18px; }
+.where.one { grid-template-columns: minmax(0, 1fr); }
+.panel { border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; display: grid; gap: 10px; align-content: start; min-width: 0; }
+.panel h3 { font-size: 15px; }
+.agenda { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.ag { border: 1px solid var(--border); border-radius: 8px; padding: 7px 9px; font-size: 12.5px; color: var(--text-3); }
+.ag b { display: block; font-family: var(--font-mono); font-size: 11.5px; }
+.ag.now { border-color: var(--accent); background: var(--accent-bg); color: var(--text); }
+.ag.part { border-style: dashed; border-color: var(--accent-border); color: var(--text-2); }
+.ag.done { background: var(--ok-bg); border-color: transparent; color: var(--ok); }
+.prev { display: grid; gap: 8px; }
+.prev-row { display: grid; grid-template-columns: 70px minmax(0,1.2fr) minmax(0,1fr) 120px; gap: 10px; font-size: 13px; padding: 8px 0; border-bottom: 1px solid var(--border); align-items: baseline; }
+.prev-row b { font-family: var(--font-mono); color: var(--accent); font-size: 12px; }
+.prev-row .to { font-family: var(--font-mono); font-size: 12px; color: var(--ok); }
+.prev-row .to.open { color: var(--warn); }
+@media (max-width: 700px) { .prev-row { grid-template-columns: 60px minmax(0,1fr); } .prev-row > :nth-child(n+3) { grid-column: 2; } }
+.tlist { display: grid; gap: 6px; }
+.tl { display: grid; grid-template-columns: 34px 1fr; gap: 8px; font-size: 13px; align-items: baseline; }
+.tl b { font-family: var(--font-mono); color: var(--accent); }
+.tl span em { display: block; font-style: normal; color: var(--text-3); font-size: 12.5px; }
+.deltas { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; }
+.delta { text-align: left; font: inherit; cursor: pointer; border: 1px solid var(--border); background: var(--surface); border-radius: var(--radius); padding: 12px 14px; display: grid; gap: 4px; color: var(--text); }
+.delta:hover { border-color: var(--accent); }
+.delta b { font-size: 14.5px; } .delta span { font-size: 13px; color: var(--text-2); } .delta code { font-family: var(--font-mono); font-size: 11.5px; color: var(--accent); }
+.legend { display: flex; gap: 8px; flex-wrap: wrap; font-size: 12.5px; color: var(--text-2); align-items: center; }
+/* 沙盘 */
+.sandbox { display: grid; grid-template-columns: 250px minmax(0, 1fr); gap: 16px; align-items: start; }
+.sb-side { display: grid; gap: 12px; }
+.sandbox.noside { grid-template-columns: minmax(0, 1fr); }
+.sandbox.noside .sb-side { display: none; }
+.sb-group { display: grid; gap: 5px; }
+.sb-group h4 { margin: 0; font-size: 12px; letter-spacing: .1em; color: var(--text-3); }
+.sb-btn { text-align: left; font: inherit; font-size: 13px; cursor: pointer; border: 1px solid var(--border); background: var(--surface); color: var(--text); border-radius: 8px; padding: 7px 10px; }
+.sb-btn.on { border-color: var(--accent); background: var(--accent-bg); font-weight: 700; }
+.sb-btn small { color: var(--text-3); font-family: var(--font-mono); margin-right: 6px; }
+.stage { background: var(--stage); border-radius: var(--radius); padding: 14px; border: 1px solid var(--stage-line); min-width: 0; display: grid; gap: 10px; }
+.obj-bar { display: flex; gap: 6px; flex-wrap: wrap; }
+.obj-chip { font: inherit; font-size: 12px; cursor: pointer; background: transparent; color: var(--stage-muted); border: 1px solid var(--stage-line); border-radius: 99px; padding: 3px 10px; }
+.obj-chip.on { color: #fff; border-color: #60a5fa; background: #1e3a8a; }
+.svg-scroll { overflow-x: auto; }
+.diagram-svg { width: 100%; min-width: 900px; height: auto; display: block; background: var(--stage-2); border-radius: 8px; }
+.spot { background: #111a2e; border: 1px solid var(--stage-line); border-radius: 8px; padding: 12px 14px; color: var(--stage-text); font-size: 13.5px; display: grid; gap: 8px; }
+.spot b { color: #fde68a; }
+.spot .jump { font: inherit; font-size: 12px; cursor: pointer; background: #1e293b; color: #bfdbfe; border: 1px solid #334155; border-radius: 6px; padding: 3px 8px; margin-right: 6px; }
+@keyframes dash { to { stroke-dashoffset: -24; } }
+.flow { stroke-dasharray: 8 4; animation: dash .9s linear infinite; }
+@media (prefers-reduced-motion: reduce) { .flow { animation: none; } }
+/* 对象表 */
+.tbl-wrap { overflow-x: auto; }
+table.objs { width: 100%; border-collapse: collapse; font-size: 13.5px; min-width: 760px; }
+table.objs th { text-align: left; font-size: 12px; color: var(--text-3); font-weight: 700; padding: 8px 10px; border-bottom: 1px solid var(--border-strong); }
+table.objs td { padding: 9px 10px; border-bottom: 1px solid var(--border); vertical-align: top; }
+table.objs tr { cursor: pointer; } table.objs tbody tr:hover { background: var(--surface-alt); }
+.layer { display: inline-block; font-size: 11.5px; font-weight: 700; padding: 1px 8px; border-radius: 99px; white-space: nowrap; }
+.layer-goal { background: var(--goal-bg); color: var(--goal); } .layer-human { background: var(--accent-bg); color: var(--accent); }
+.layer-gate { background: var(--ok-bg); color: var(--ok); } .layer-agent { background: var(--agent-bg); color: var(--agent); } .layer-out { background: var(--surface-alt); color: var(--text-2); }
+/* 条目 */
+.filters { display: flex; gap: 6px; flex-wrap: wrap; }
+.fbtn { font: inherit; font-size: 13px; cursor: pointer; border: 1px solid var(--border); background: var(--surface); color: var(--text-2); border-radius: 99px; padding: 5px 12px; }
+.fbtn.on { border-color: var(--accent); color: var(--accent); background: var(--accent-bg); font-weight: 700; }
+.group-title { font-family: var(--font-display); font-size: 16px; color: var(--text-2); margin-top: 6px; }
+.card { border: 1px solid var(--border); border-radius: var(--radius); padding: 18px; background: var(--surface); display: grid; gap: 12px; scroll-margin-top: 90px; min-width: 0; overflow-wrap: anywhere; }
+.card.s-ok { border-left: 5px solid var(--ok); } .card.s-tweak { border-left: 5px solid var(--warn); } .card.s-bad { border-left: 5px solid var(--bad); }
+.card.flash { box-shadow: 0 0 0 3px var(--accent-border); }
+.card-head { display: flex; gap: 8px 10px; flex-wrap: wrap; align-items: baseline; }
+.card-id { font-family: var(--font-mono); font-size: 12.5px; color: var(--accent); font-weight: 700; }
+.card-head h3 { font-size: 17px; }
+.chip { font-size: 12px; font-weight: 700; padding: 2px 8px; border-radius: 99px; border: 1px solid var(--border); color: var(--text-2); white-space: nowrap; }
+.chip-choice { background: var(--warn-bg); color: var(--warn-text); border-color: transparent; }
+.chip-multi { background: var(--agent-bg); color: var(--agent); border-color: transparent; }
+.chip-confirm { background: var(--ok-bg); color: var(--ok-text); border-color: transparent; }
+.from { font-size: 12.5px; color: var(--text-3); }
+.plain { background: var(--surface-alt); border-radius: 8px; padding: 12px 14px; max-width: 80ch; }
+.evid { border-left: 3px solid var(--goal-border); background: var(--goal-bg); border-radius: 0 8px 8px 0; padding: 10px 14px; font-size: 13.5px; color: var(--text); max-width: 86ch; }
+.evid > b { color: var(--goal); font-size: 12px; letter-spacing: .08em; display: block; }
+a.src { font-family: var(--font-mono); font-size: 12px; font-weight: 700; color: var(--goal); text-decoration: none; border-bottom: 1px dotted var(--goal); cursor: help; }
+.fig-table-wrap { overflow-x: auto; background: var(--stage-2); border-radius: 8px; padding: 12px 14px; }
+.fig-table { width: 100%; border-collapse: collapse; font-size: 13px; color: var(--stage-text); min-width: 560px; }
+.fig-table th { text-align: left; color: var(--stage-muted); font-weight: 600; padding: 6px 8px; border-bottom: 1px solid #334155; }
+.fig-table td { padding: 7px 8px; border-bottom: 1px solid #1e293b; vertical-align: top; }
+.fig-table .term { color: #93c5fd; border-bottom-color: #3b5bab; }
+.fig-foot { color: var(--stage-muted); font-size: 12.5px; margin-top: 8px; }
+.chipflow { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; background: var(--stage-2); border-radius: 8px; padding: 14px; }
+.cf-step { font-size: 13px; font-weight: 600; padding: 6px 12px; border-radius: 8px; border: 1.5px solid #475569; color: #e2e8f0; background: #111a2e; }
+.cf-h { border-color: #60a5fa; } .cf-a { border-color: #c084fc; } .cf-o { border-color: #f472b6; } .cf-n { border-color: #64748b; }
+.cf-arrow { color: #34d399; font-weight: 800; }
+.opts { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 8px; }
+.opt { display: grid; grid-template-columns: auto 1fr; gap: 10px; border: 1.5px solid var(--border-strong); border-radius: 9px; padding: 10px 12px; cursor: pointer; background: var(--surface); }
+.opt.sel { border-color: var(--accent); background: var(--accent-bg); }
+.opt input { margin-top: 5px; accent-color: var(--accent); align-self: start; }
+.opt b { font-size: 14px; } .opt p { font-size: 13px; color: var(--text-2); }
+.rec { font-size: 12px; font-weight: 700; color: var(--text-2); background: transparent; border: 1px solid var(--border-strong); padding: 0 6px; border-radius: 5px; margin-left: 6px; vertical-align: 1px; white-space: nowrap; }
+.decide { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.sbtns { display: inline-flex; gap: 4px; background: var(--surface-alt); padding: 4px; border-radius: 9px; }
+.sbtn { font: inherit; border: none; background: transparent; color: var(--text-2); padding: 6px 12px; border-radius: 7px; font-weight: 700; cursor: pointer; font-size: 13px; }
+.sbtn.on[data-s="ok"] { background: var(--ok-solid); color: var(--on-solid); } .sbtn.on[data-s="tweak"] { background: var(--warn-solid); color: var(--on-solid); } .sbtn.on[data-s="bad"] { background: var(--bad-solid); color: var(--on-solid); }
+/* v3.4 输入框：浅底、圆角、聚焦光环、自动增高 */
+textarea, .fields input { width: 100%; font: inherit; font-size: 14px; line-height: 1.65; color: var(--text); background: var(--field-bg); padding: 10px 14px; border: 1px solid var(--border); border-radius: 10px; min-height: 46px; resize: none; overflow: hidden; transition: border-color .15s, box-shadow .15s, background .15s; }
+textarea::placeholder, .fields input::placeholder { color: var(--text-3); opacity: .8; }
+textarea:hover, .fields input:hover { border-color: var(--border-strong); }
+textarea:focus, .fields input:focus { outline: none; border-color: var(--accent); background: var(--surface); box-shadow: 0 0 0 4px var(--field-focus); }
+#md-preview { resize: vertical; overflow: auto; }
+/* 附录 */
+.gloss { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 10px; }
+.g { border: 1px solid var(--border); border-radius: 9px; padding: 11px 13px; font-size: 13.5px; scroll-margin-top: 90px; }
+.g b { display: block; font-size: 14px; } .g i { display: block; font-style: normal; color: var(--text-3); font-size: 12.5px; margin-top: 4px; }
+.g:target { border-color: var(--accent); background: var(--accent-bg); }
+.srcs { display: grid; gap: 8px; }
+.s-row { display: grid; grid-template-columns: 74px 1fr; gap: 10px; font-size: 13.5px; border-bottom: 1px solid var(--border); padding-bottom: 8px; scroll-margin-top: 90px; }
+.s-row b { font-family: var(--font-mono); color: var(--goal); }
+.s-row:target { background: var(--goal-bg); }
+.s-row a { word-break: break-all; }
+/* 导出 */
+.sumcards { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 8px; }
+.sc { border: 1px solid var(--border); border-radius: 9px; padding: 10px 12px; font-variant-numeric: tabular-nums; }
+.sc b { display: block; font-size: 22px; font-family: var(--font-display); } .sc span { font-size: 12.5px; color: var(--text-3); }
+#save-target { border: 1px dashed var(--accent-border); border-radius: 9px; padding: 10px 14px; font-size: 13px; color: var(--text-2); }
+#md-preview { min-height: 240px; font-family: var(--font-mono); font-size: 12.5px; }
+#toast { position: fixed; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--tip-bg); color: var(--tip-fg); padding: 10px 16px; border-radius: 10px; font-size: 13.5px; z-index: 9000; max-width: calc(100vw - 32px); opacity: 0; transition: opacity .2s; pointer-events: none; }
+#toast.on { opacity: 1; }
+@media (max-width: 900px) {
+  .sandbox, .where { grid-template-columns: minmax(0, 1fr); }
+  .sb-side { grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); }
+  .agenda { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .nav-pills { display: none; }
+  .top { position: static; }
+  .sec { padding: 18px; }
+}
+
+/* ===== v3.3 分组决定卡 + 进度导航 ===== */
+.chip-group { background: var(--accent-bg); color: var(--accent); border-color: var(--accent-border); }
+.items-layout { display: grid; grid-template-columns: 220px minmax(0,1fr); gap: 18px; align-items: start; }
+.toc { position: sticky; top: 78px; max-height: calc(100vh - 100px); overflow: auto; border: 1px solid var(--border); border-radius: var(--radius); padding: 10px; background: var(--surface-alt); font-size: 12.5px; display: grid; gap: 1px; }
+.toc .tg { font-weight: 700; color: var(--text-3); margin: 8px 6px 2px; font-size: 11.5px; }
+.toc .tg:first-child { margin-top: 0; }
+.toc a { display: grid; grid-template-columns: 10px minmax(0,1fr); gap: 8px; align-items: baseline; color: var(--text-2); text-decoration: none; padding: 4px 6px; border-radius: 6px; line-height: 1.45; }
+.toc a:hover { background: var(--surface); }
+.toc .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--border-strong); transform: translateY(1px); }
+.toc .dot.ok { background: var(--ok); } .toc .dot.tweak { background: var(--warn); } .toc .dot.bad { background: var(--bad); }
+.toc .tsum { margin: 0 6px 6px; color: var(--text-3); }
+@media (max-width: 1000px) { .items-layout { grid-template-columns: minmax(0,1fr); } .toc { display: none; } }
+.ex { border-left: 3px solid var(--accent-border); background: var(--accent-bg); border-radius: 0 8px 8px 0; padding: 10px 14px; font-size: 14px; max-width: 86ch; }
+.ex > b, .risk > b { font-size: 12px; display: block; letter-spacing: .06em; }
+.ex > b { color: var(--accent); }
+.risk { border-left: 3px solid var(--warn); background: var(--warn-bg); border-radius: 0 8px 8px 0; padding: 10px 14px; font-size: 13.5px; max-width: 86ch; }
+.risk > b { color: var(--warn-text); }
+.settled { font-size: 13.5px; color: var(--text-2); max-width: 86ch; border: 1px dashed var(--border-strong); border-radius: 8px; padding: 10px 14px; }
+.settled > b { font-size: 12px; color: var(--text-3); letter-spacing: .06em; }
+.settled ul { margin: 4px 0 0; padding-left: 20px; }
+.viewbtn { justify-self: start; }
+.card-head .viewbtn { padding: 4px 10px; font-size: 12.5px; align-self: center; min-height: 28px; }   /* v3.7.1：卡头的按钮仍是 .btn 的方角和边框，和旁边不能点的圆角芯片分得开 */
+.points { display: grid; gap: 10px; grid-template-columns: minmax(0, 1fr); }
+.points-h { font-size: 12.5px; color: var(--text-3); font-weight: 700; }
+.pt { border: 1px solid var(--border); border-radius: 9px; padding: 12px 14px; display: grid; gap: 8px; background: var(--surface); min-width: 0; }
+.pt.adj { border-color: var(--warn); background: var(--warn-bg); } .pt.no { border-color: var(--bad); background: var(--bad-bg); }
+.pt-head { display: flex; gap: 6px 10px; align-items: baseline; flex-wrap: wrap; }
+.pt-n { font-family: var(--font-mono); font-size: 12.5px; color: var(--accent); font-weight: 700; }
+.pt-head b { font-size: 15px; }
+.srcb { font-size: 12px; padding: 1px 8px; border-radius: 99px; border: 1px solid var(--border-strong); color: var(--text-2); white-space: nowrap; }
+.srcb.inf { border-color: var(--agent-border); color: var(--agent); background: var(--agent-bg); }
+.srcb.cold { border-color: var(--goal-border); color: var(--goal); background: var(--goal-bg); }
+.pt-body { display: grid; gap: 4px; font-size: 13.8px; max-width: 88ch; }
+.pt-body p > b:first-child { color: var(--text-3); font-weight: 700; margin-right: 6px; font-size: 12.5px; }
+.pt details summary { cursor: pointer; font-size: 12.5px; color: var(--text-3); }
+.pt details > div { font-size: 13px; color: var(--text-2); padding-top: 6px; }
+.pchoice { display: inline-flex; gap: 4px; background: var(--surface-alt); padding: 3px; border-radius: 8px; justify-self: start; flex-wrap: wrap; }
+.pchoice button { font: inherit; font-size: 12.5px; border: none; background: transparent; padding: 4px 10px; border-radius: 6px; cursor: pointer; color: var(--text-2); font-weight: 600; }
+.pchoice button.on[data-p="yes"] { background: var(--ok-solid); color: var(--on-solid); } .pchoice button.on[data-p="adj"] { background: var(--warn-solid); color: var(--on-solid); } .pchoice button.on[data-p="no"] { background: var(--bad-solid); color: var(--on-solid); }
+.pt textarea { min-height: 54px; }
+.gconfirm { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.chip-heavy { background: var(--warn-bg); color: var(--warn-text); border-color: transparent; }
+.chip-light { background: var(--surface-alt); color: var(--text-3); }
+.chip-fill { background: var(--goal-bg); color: var(--goal); border-color: transparent; }
+.tgt { font-size: 12px; padding: 1px 8px; border-radius: 99px; background: var(--surface-alt); color: var(--text-3); white-space: nowrap; }
+.tgt.base { background: var(--bad-bg); color: var(--bad-text); font-weight: 700; }
+.fields { display: grid; gap: 10px; max-width: 760px; }
+.fields label { display: grid; gap: 4px; font-size: 13.5px; font-weight: 600; }
+.nochoice { justify-self: start; }
+
+/* ===== v3.4 逐点卡：说明折叠为芯片、分类型样式、无默认表态 ===== */
+.pt { border: 1px solid var(--border); border-left: 4px dashed var(--border-strong); border-radius: 10px; padding: 14px 16px; gap: 10px; }
+.pt.st-yes { border-left: 4px solid var(--ok); }
+.pt.st-adj { border-left: 4px solid var(--warn); background: var(--warn-bg); border-color: var(--warn); }
+.pt.st-no { border-left: 4px solid var(--bad); background: var(--bad-bg); border-color: var(--bad); }
+.pt-head { display: grid; grid-template-columns: auto minmax(0,1fr); gap: 10px; align-items: start; }
+.pt-n { display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: var(--accent-bg); color: var(--accent); font-family: var(--font-mono); font-size: 12px; font-weight: 800; margin-top: 1px; }
+.pt-t { display: grid; gap: 4px; min-width: 0; }
+.pt-title { font-size: 15.5px; font-weight: 650; line-height: 1.6; color: var(--text); }
+.pt-tags { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.pt-wait { font-size: 12px; color: var(--text-3); border: 1px dashed var(--border-strong); border-radius: 99px; padding: 0 8px; }
+.more { display: flex; gap: 6px; flex-wrap: wrap; }
+.mchip { font: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer; border-radius: 99px; padding: 3px 11px 3px 9px; border: 1px solid var(--border); background: var(--surface); color: var(--text-2); display: inline-flex; gap: 5px; align-items: center; transition: background .15s, border-color .15s; }
+.mchip::after { content: "▸"; font-size: 10px; opacity: .6; transition: transform .15s; }
+.mchip[aria-expanded="true"]::after { transform: rotate(90deg); }
+.mchip:hover { border-color: var(--border-strong); }
+.mchip.k-ex { color: var(--accent); border-color: var(--accent-border); }
+.mchip.k-ex[aria-expanded="true"] { background: var(--accent-bg); }
+.mchip.k-why[aria-expanded="true"] { background: var(--surface-alt); border-color: var(--border-strong); color: var(--text); }
+.mchip.k-risk { color: var(--warn-text); border-color: var(--warn); background: var(--warn-bg); }
+.mchip.k-risk[aria-expanded="true"] { background: var(--warn-solid); color: var(--on-solid); }
+.mchip.k-ifno { color: var(--text-3); border-style: dashed; }
+.mchip.k-ifno[aria-expanded="true"] { background: var(--surface-alt); }
+.mchip.k-text { color: var(--goal); border-color: var(--goal-border); }
+.mchip.k-text[aria-expanded="true"] { background: var(--goal-bg); }
+.panels { display: grid; gap: 8px; }
+.panels:empty { display: none; }
+.pan { border-radius: 9px; padding: 10px 14px; max-width: 88ch; animation: panIn .16s ease-out; }
+.pan[hidden] { display: none; }
+@keyframes panIn { from { opacity: 0; transform: translateY(-3px); } to { opacity: 1; transform: none; } }
+.pan > .ph { display: block; font-size: 12px; font-weight: 800; letter-spacing: .08em; margin-bottom: 3px; font-family: var(--font-body); }
+.pan.k-ex { background: var(--accent-bg); border-left: 3px solid var(--accent); font-family: var(--font-display); font-size: 14.8px; line-height: 1.8; color: var(--text); }
+.pan.k-ex > .ph { color: var(--accent); }
+.pan.k-why { background: var(--surface-alt); font-size: 14px; color: var(--text); }
+.pan.k-why > .ph { color: var(--text-3); }
+.pan.k-risk { background: var(--warn-bg); border: 1px solid color-mix(in srgb, var(--warn) 45%, transparent); font-size: 14px; color: var(--text); font-weight: 500; }
+.pan.k-risk > .ph { color: var(--warn-text); }
+.pan.k-ifno { border: 1px dashed var(--border-strong); font-size: 13px; color: var(--text-2); }
+.pan.k-ifno > .ph { color: var(--text-3); }
+.pan.k-text { background: var(--goal-bg); border-left: 3px solid var(--goal-border); font-size: 13px; color: var(--text-2); }
+.pan.k-text > .ph { color: var(--goal); }
+.pact { display: flex; gap: 8px 12px; align-items: center; flex-wrap: wrap; }
+.pchoice { gap: 6px; background: transparent; padding: 0; }
+.pchoice button { border: 1.5px solid var(--border-strong); background: var(--surface); padding: 5px 14px; border-radius: 99px; font-size: 13px; color: var(--text-2); transition: all .12s; }
+.pchoice button:hover { border-color: var(--accent); color: var(--text); }
+.pchoice button.on[data-p="yes"] { border-color: var(--ok); } .pchoice button.on[data-p="adj"] { border-color: var(--warn); } .pchoice button.on[data-p="no"] { border-color: var(--bad); }
+.how { font-size: 12px; color: var(--text-3); }
+.note { display: grid; gap: 5px; }
+.note > span { font-size: 12px; font-weight: 700; color: var(--text-3); }
+.pt.st-yes .note > span { color: var(--ok-text); } .pt.st-adj .note > span { color: var(--warn-text); } .pt.st-no .note > span { color: var(--bad-text); }
+.gfoot { display: flex; gap: 10px 14px; align-items: center; flex-wrap: wrap; font-size: 13px; color: var(--text-2); }
+.gfoot b { font-variant-numeric: tabular-nums; }
+.gfoot .done { color: var(--ok-text); font-weight: 700; }
+.toc .dot.part { background: conic-gradient(var(--accent) 0 50%, var(--border-strong) 50% 100%); }
+.toc-h { display: flex; justify-content: space-between; align-items: center; gap: 6px; margin: 0 2px 4px 6px; }
+.toc-h b { font-size: 12px; color: var(--text-2); }
+.toc-x { font: inherit; font-size: 11.5px; border: 1px solid var(--border); background: var(--surface); color: var(--text-3); border-radius: 6px; padding: 1px 7px; cursor: pointer; }
+.toc-x:hover { color: var(--text); border-color: var(--border-strong); }
+.toc-next { font: inherit; font-size: 12px; margin: 0 6px 6px; border: 1px solid var(--accent-border); background: var(--accent-bg); color: var(--accent); border-radius: 6px; padding: 3px 8px; cursor: pointer; text-align: left; }
+.items-layout.toc-off { grid-template-columns: minmax(0,1fr); }
+.items-layout.toc-off .toc { display: none; }
+.fbtn.toc-tg { margin-left: auto; }
+.panels:not(:has(> .pan:not([hidden]))) { display: none; }
+.pan { max-width: 760px; }
+.pt.st-adj .pan.k-risk, .pt.st-no .pan.k-risk, .pt.st-adj .pan.k-ifno, .pt.st-no .pan.k-ifno { background: var(--surface); }
+@media (max-width: 560px) {
+  .card { padding: 14px; }
+  .pt { padding: 12px; }
+  .pt-head { gap: 8px; }
+  .pchoice { gap: 4px; flex-wrap: nowrap; }
+  .pchoice button { padding: 5px 10px; font-size: 12.5px; white-space: nowrap; }
+  .mchip { font-size: 12px; padding: 2px 9px 2px 7px; }
+}
+@media (max-width: 1000px) { .fbtn.toc-tg { display: none; } }
+
+/* ===== v3.7 低负担：页面速览、审批路线、简报四格、图、参考表、对照式的点 =====
+   规矩：图都是普通的网格 / 弹性布局，方框不用绝对定位，所以不会互相压住；只有连接线、箭头这类装饰用伪元素。
+   字不小于 12px，文字和背景的对比度不低于 4.5:1（test.js 在浅色和深色下都查）。 */
+.pbrief { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 8px 16px; border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; max-width: 980px; overflow-wrap: anywhere; }
+.pbrief > b { font-size: 13px; font-weight: 700; color: var(--accent); padding-top: 1px; }
+.pbrief > b.hon { color: var(--goal); }
+.pbrief > span { font-size: 15px; min-width: 0; }
+.lead-fold > summary, .dfold > summary { cursor: pointer; font-size: 13px; color: var(--text-3); font-weight: 600; }
+.lead-fold[open] > summary { margin-bottom: 6px; }
+.route { border: 1px solid var(--border); border-radius: var(--radius); display: grid; min-width: 0; overflow-wrap: anywhere; }
+.route-h { display: flex; flex-wrap: wrap; gap: 4px 14px; align-items: baseline; padding: 12px 16px 8px; }
+.route-h h3 { font-size: 16px; }
+.route-h span { font-size: 13px; color: var(--text-3); }
+.rt { display: grid; grid-template-columns: 14px minmax(0, 1.5fr) minmax(0, 1.2fr) 112px; gap: 4px 12px; align-items: start; padding: 10px 16px; border-top: 1px solid var(--border); }
+.rt .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--border-strong); margin-top: 7px; }
+.rt .dot.ok { background: var(--ok-solid); } .rt .dot.tweak { background: var(--warn-solid); } .rt .dot.bad { background: var(--bad-solid); }
+.rt .dot.part { background: conic-gradient(var(--accent) 0 50%, var(--border-strong) 50% 100%); }
+.rt-t { min-width: 0; }
+.rt-t > a { color: var(--text); text-decoration: none; font-weight: 650; font-size: 14.5px; }
+.rt-t > a:hover { color: var(--accent); }
+.rt-t > a .rid { font-family: var(--font-mono); font-size: 12.5px; color: var(--accent); margin-right: 6px; font-weight: 700; }
+.tags { display: flex; flex-wrap: wrap; gap: 4px 6px; margin-top: 4px; }
+.tag { font-size: 12px; line-height: 20px; padding: 0 8px; border-radius: 99px; border: 1px solid var(--border); color: var(--text-2); max-width: 100%; overflow-wrap: anywhere; }
+.tag.hot { border-color: var(--warn); color: var(--warn-text); }
+.tag.lnk { border-color: var(--accent-border); color: var(--accent); }
+.tag.nob { border-color: var(--bad); color: var(--bad-text); }
+.rt-rec { font-size: 13.5px; min-width: 0; }
+.rt-rec .hon { display: block; font-size: 13px; color: var(--goal); }
+.rt-m { font-size: 12.5px; color: var(--text-3); text-align: right; font-variant-numeric: tabular-nums; }
+.rt-m b { display: block; color: var(--text-2); font-weight: 600; }
+.route-b { display: flex; gap: 8px; flex-wrap: wrap; flex-basis: 100%; padding-top: 4px; }
+.route-more > summary { cursor: pointer; padding: 10px 16px; border-top: 1px solid var(--border); font-size: 13px; font-weight: 600; color: var(--text-3); }
+.route-more > summary:hover { color: var(--accent); }
+@media (max-width: 760px) { .rt { grid-template-columns: 14px minmax(0, 1fr); } .rt-rec, .rt-m { grid-column: 2; text-align: left; } .rt-m b { display: inline; margin-right: 8px; } }
+/* 卡头的提示芯片 */
+.chip.rtime { font-weight: 600; color: var(--text-3); }
+.chip.lnk { border-color: var(--accent-border); color: var(--accent); }
+.chip.chg { border-color: var(--goal-border); color: var(--goal); background: var(--goal-bg); white-space: normal; max-width: 100%; }
+.chip.nob { border-color: var(--bad); color: var(--bad-text); }
+.skipb { font-size: 13px; border: 1px dashed var(--accent-border); border-radius: 8px; padding: 6px 10px; color: var(--text-2); background: var(--accent-bg); }
+/* 简报四格：① 你在决定什么 ② 我推荐 ③ 你会失去什么（和 ② 并排、一样大）⚖ 实话 ④ 不同意会怎样 */
+.frame { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 1px; background: var(--border); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+.fs { background: var(--surface); padding: 10px 14px; display: grid; gap: 4px; align-content: start; min-width: 0; }
+.fs.full { grid-column: 1 / -1; }
+.fl { font-size: 12.5px; font-weight: 700; color: var(--text-3); letter-spacing: .03em; }
+.fl.cost { color: var(--warn-text); }
+.ft { font-size: 15px; font-weight: 600; line-height: 1.65; }
+.fs.hon { background: var(--goal-bg); }
+.fs.hon .fl { color: var(--goal); }
+.fs.hon .ft { font-weight: 500; }
+.basis { font-size: 12px; font-weight: 600; line-height: 18px; padding: 0 7px; border-radius: 99px; border: 1px solid var(--border-strong); color: var(--text-2); margin-left: 6px; white-space: nowrap; display: inline-block; }
+.basis.j { border-style: dashed; }
+.lchips { display: flex; flex-wrap: wrap; gap: 6px; }
+.lchip { font-size: 13px; line-height: 1.5; border: 1px solid var(--warn); background: var(--warn-bg); color: var(--text); border-radius: 7px; padding: 1px 8px; max-width: 100%; }
+.fs .more { margin-top: 2px; }
+@media (max-width: 640px) { .frame { grid-template-columns: minmax(0, 1fr); } }
+/* 图：卡片里最多两张直接显示，其余收进折叠 */
+.vis { border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px; display: grid; gap: 10px; min-width: 0; background: var(--surface); }
+.pan .vis { border: 0; padding: 0; background: transparent; }
+.vis-h { font-size: 14.5px; font-weight: 700; display: flex; gap: 4px 10px; align-items: baseline; flex-wrap: wrap; }
+.vis-h small { font-size: 12.5px; font-weight: 500; color: var(--text-3); }
+.vis-cap { font-size: 13px; color: var(--text-2); }
+.okey { display: inline-block; font-weight: 700; font-size: 13px; line-height: 1.5; border: 1.5px solid var(--border-strong); border-radius: 7px; padding: 0 7px; color: var(--text); background: var(--surface); }
+/* 逐条对照（versus）：按审批者自己的优先顺序，A 占优 / 相同·待定 / B 占优 三栏 */
+.vs { display: grid; grid-template-columns: minmax(84px, max-content) repeat(3, minmax(0, 1fr)); gap: 5px 8px; align-items: center; }
+.vs .vh { font-size: 12.5px; font-weight: 700; color: var(--text-2); text-align: center; }
+.vs .vh.a { color: var(--va); } .vs .vh.b { color: var(--vb); }
+.vs .vband { grid-column: 1 / -1; font-size: 12.5px; font-weight: 700; color: var(--text-3); border-top: 1px solid var(--border); padding-top: 6px; }
+.vs .vl { font-size: 13.5px; font-weight: 600; min-width: 0; }
+.vs .vl i { font-style: normal; color: var(--text-3); font-weight: 700; margin-left: 4px; }
+.vs .vc { display: flex; justify-content: center; min-width: 0; }
+.vp { font-size: 13px; line-height: 1.45; border-radius: 8px; padding: 3px 9px; text-align: center; max-width: 100%; border: 1.5px solid var(--border-strong); background: var(--surface); color: var(--text); overflow-wrap: anywhere; }
+.vp small { display: block; font-size: 12px; color: var(--text-3); }
+.vp { position: relative; }
+/* 哪一边、多明显：宽屏上靠栏位和颜色，这几个字只给读屏和冷读材料（不用 display:none，免得被一起藏掉）；手机上直接显示 */
+.vp .vside { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; font-weight: 700; }
+.vp.a2, .vp.b2 { font-weight: 700; border-width: 2px; }
+.vp.a2 { border-color: var(--va); background: var(--va-bg); } .vp.a1 { border-color: var(--va); }
+.vp.b2 { border-color: var(--vb); background: var(--vb-bg); } .vp.b1 { border-color: var(--vb); }
+.vp.eq { background: var(--surface-alt); border-color: transparent; }
+.vp.unk { border-style: dashed; }
+.vs-key { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 12.5px; color: var(--text-3); }
+.vs-sum { font-size: 13.5px; color: var(--text); background: var(--surface-alt); border-radius: 8px; padding: 6px 10px; }
+@media (max-width: 560px) {
+  .vs { grid-template-columns: minmax(0, 1fr); gap: 4px; }
+  .vs .vh { display: none; }
+  .vs .vl { margin-top: 6px; }
+  .vs .vc { justify-content: flex-start; padding-left: 10px; }
+  .vs .vc:empty { display: none; }
+  .vp { text-align: left; }
+  .vp .vside { position: static; width: auto; height: auto; overflow: visible; clip: auto; clip-path: none; white-space: normal; margin-right: 4px; }
+}
+/* 判断树（tree）：什么情况下答案会变 */
+.tree, .tree ul { list-style: none; margin: 0; padding: 0; }
+.tree ul { margin-left: 12px; padding-left: 16px; border-left: 2px solid var(--border-strong); }
+.tree li { position: relative; padding: 4px 0; }
+.tree ul > li::before { content: ""; position: absolute; left: -16px; top: 17px; width: 12px; border-top: 2px solid var(--border-strong); }
+.tq { display: inline-block; font-size: 14px; font-weight: 650; background: var(--surface-alt); border-radius: 8px; padding: 4px 10px; max-width: 100%; }
+.tq small { display: block; font-weight: 500; font-size: 12.5px; color: var(--text-3); }
+.tleaf, .tbr { display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: baseline; }
+.te { font-size: 12.5px; border: 1px solid var(--border-strong); border-radius: 99px; padding: 0 8px; color: var(--text-2); white-space: nowrap; }
+.te::after { content: " →"; }
+.tnote { font-size: 13px; color: var(--text-2); min-width: 0; }
+.tact { font-size: 13.5px; font-weight: 600; }
+/* 步骤（flow）与时序（seq） */
+.flw { display: flex; flex-wrap: wrap; gap: 6px; align-items: stretch; }
+.fstep { border: 1.5px solid var(--border-strong); border-radius: 9px; padding: 5px 10px; font-size: 13.5px; font-weight: 600; max-width: 100%; background: var(--surface); }
+.fstep small { display: block; font-size: 12px; font-weight: 500; color: var(--text-3); }
+.farr { align-self: center; color: var(--text-3); font-weight: 700; font-size: 14px; }
+@media (max-width: 560px) { .flw { flex-direction: column; } .farr { transform: rotate(90deg); align-self: flex-start; margin-left: 14px; } }
+.seq { display: grid; min-width: 0; }
+.sq-row { display: grid; grid-template-columns: repeat(var(--n), minmax(0, 1fr)); align-items: end; min-height: 30px; }
+.sq-lane { grid-row: 1; text-align: center; font-size: 13px; font-weight: 700; padding: 4px 2px; margin: 0 3px; border-bottom: 2px solid var(--border-strong); overflow-wrap: anywhere; min-width: 0; }
+.sq-life { grid-row: 1; justify-self: center; align-self: stretch; width: 0; border-left: 2px dashed var(--border); }
+.sq-msg { grid-row: 1; position: relative; z-index: 1; text-align: center; font-size: 13px; line-height: 1.45; padding: 6px 4px 2px; margin: 0 calc(50% / var(--span)); border-bottom: 2px solid var(--text-3); min-width: 0; }
+.sq-msg > span { background: var(--surface); padding: 0 4px; display: inline-block; max-width: 100%; overflow-wrap: anywhere; }
+.sq-msg > span small { display: block; font-size: 12px; color: var(--text-3); }
+.sq-msg::after { content: ""; position: absolute; bottom: -7px; border-top: 6px solid transparent; border-bottom: 6px solid transparent; }
+.sq-msg.r::after { right: 0; border-left: 9px solid var(--text-3); }
+.sq-msg.l::after { left: 0; border-right: 9px solid var(--text-3); }
+.sq-self { grid-row: 1; z-index: 1; margin: 4px 3px; border: 1.5px solid var(--border-strong); border-radius: 8px; font-size: 13px; line-height: 1.45; padding: 3px 6px; text-align: center; background: var(--surface); min-width: 0; overflow-wrap: anywhere; }
+.sq-self small { display: block; font-size: 12px; color: var(--text-3); }
+.sq-n { font-family: var(--font-mono); font-size: 12px; color: var(--text-3); margin-right: 4px; }
+.seq-list { display: none; margin: 0; padding-left: 22px; font-size: 13.5px; }
+.seq-list li { margin: 3px 0; }
+@media (max-width: 560px) { .seq { display: none; } .seq-list { display: block; } }
+/* 数量（bars）、两列对照（layers）、分界线（scale） */
+.bars { display: grid; grid-template-columns: max-content minmax(0, 1fr) max-content; gap: 6px 10px; align-items: center; }
+.bl { font-size: 13px; min-width: 0; }
+.bt { height: 10px; border-radius: 0 5px 5px 0; background: var(--text-3); min-width: 2px; }
+.bv { font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.bv small { font-size: 12px; font-weight: 500; color: var(--text-3); }
+@media (max-width: 560px) { .bars { grid-template-columns: minmax(0, 1fr) max-content; } .bl { grid-column: 1 / -1; } }
+.lay { display: grid; grid-template-columns: max-content minmax(0, 1fr) minmax(0, 1fr); gap: 5px 8px; align-items: stretch; }
+.lay .lh { font-size: 12.5px; font-weight: 700; text-align: center; }
+.lay .lh.a { color: var(--va); } .lay .lh.b { color: var(--vb); }
+.lay .ll { font-size: 13px; font-weight: 700; color: var(--text-3); padding-top: 6px; }
+.lay .lc { font-size: 13.5px; border: 1px solid var(--border); border-radius: 8px; padding: 5px 10px; min-width: 0; overflow-wrap: anywhere; }
+.lay .lc.a { border-left: 3px solid var(--va); } .lay .lc.b { border-left: 3px solid var(--vb); }
+.lay .lc.sh { grid-column: span 2; background: var(--surface-alt); border-left: 3px solid var(--border-strong); }
+.lay .lc.sh small { display: block; font-size: 12px; color: var(--text-3); font-weight: 700; }
+@media (max-width: 560px) { .lay { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } .lay .ll { grid-column: 1 / -1; padding-top: 4px; } .lay .l0 { display: none; } }
+.scl-q { font-size: 14px; font-weight: 650; }
+.scl-q small { font-weight: 500; font-size: 12.5px; color: var(--text-3); margin-left: 6px; }
+.scl { display: flex; border: 1px solid var(--border-strong); border-radius: 8px; overflow: hidden; }
+.sz { padding: 6px 8px; font-size: 13px; min-width: 0; border-left: 1px solid var(--border-strong); text-align: center; display: grid; gap: 3px; align-content: start; justify-items: center; }
+.sz:first-child { border-left: 0; }
+.sz > b { font-size: 12.5px; color: var(--text-3); font-weight: 700; }
+@media (max-width: 560px) { .scl { flex-direction: column; } .sz { border-left: 0; border-top: 1px solid var(--border-strong); text-align: left; justify-items: start; } .sz:first-child { border-top: 0; } }
+/* 参考表（tables）：手机上每行变成一张小卡 */
+.rtbl { width: 100%; border-collapse: collapse; font-size: 13px; }
+.rtbl th { text-align: left; font-size: 12.5px; color: var(--text-3); padding: 6px 8px; border-bottom: 1px solid var(--border-strong); vertical-align: bottom; }
+.rtbl td { padding: 7px 8px; border-bottom: 1px solid var(--border); vertical-align: top; }
+.card table { overflow-wrap: break-word; }
+.rtbl td:first-child, .rtbl th:first-child { word-break: keep-all; }
+.card:focus { outline: none; }
+.card:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.rtbl-note { font-size: 12.5px; color: var(--text-2); margin-top: 6px; }
+.rtbl small { display: block; font-size: 12px; color: var(--text-3); }
+@media (max-width: 640px) {
+  .rtbl thead { display: none; }
+  .rtbl tr { display: block; border-bottom: 2px solid var(--border-strong); padding: 6px 0; }
+  .rtbl td { display: block; border: 0; padding: 2px 0; }
+  .rtbl td::before { content: attr(data-h); display: block; font-size: 12px; font-weight: 700; color: var(--text-3); }
+}
+/* 依据可靠度、核对材料 */
+.trust { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 13px; color: var(--text-2); }
+.trust > b { font-size: 12.5px; color: var(--text-3); font-weight: 700; }
+.trust > span { border: 1px dashed var(--border-strong); border-radius: 99px; padding: 0 9px; font-size: 12.5px; }
+.more > .ml { font-size: 12.5px; font-weight: 700; color: var(--text-3); align-self: center; margin-right: 2px; }
+.mchip.k-full, .mchip.k-title, .mchip.k-settled { color: var(--text-2); }
+.mchip.k-evid { color: var(--goal); border-color: var(--goal-border); }
+.mchip.k-evid[aria-expanded="true"] { background: var(--goal-bg); }
+.mchip.k-fig, .mchip.k-tbl, .mchip.k-vis { color: var(--accent); border-color: var(--accent-border); }
+.mchip.k-fig[aria-expanded="true"], .mchip.k-tbl[aria-expanded="true"], .mchip.k-vis[aria-expanded="true"] { background: var(--accent-bg); }
+.pan.k-full, .pan.k-title, .pan.k-settled { background: var(--surface-alt); font-size: 14px; color: var(--text); }
+.pan.k-full > .ph, .pan.k-title > .ph, .pan.k-settled > .ph { color: var(--text-3); }
+.pan.k-evid { background: var(--goal-bg); border-left: 3px solid var(--goal-border); font-size: 13.5px; color: var(--text); }
+.pan.k-evid > .ph { color: var(--goal); }
+.pan.k-fig, .pan.k-tbl, .pan.k-vis { border: 1px solid var(--border); font-size: 13.5px; max-width: none; min-width: 0; overflow-x: auto; }
+.pan.k-fig > .ph, .pan.k-tbl > .ph, .pan.k-vis > .ph { color: var(--accent); }
+.pan p + p { margin-top: 6px; }
+/* 选项的补充：好处、代价、选了之后、对别的卡的影响、退路 */
+/* 有补充的选项：可点的只有 label（单选框 + 名字 + 说明），补充和原文在 label 外面，缩进到和名字对齐 */
+.opt.optw { grid-template-columns: minmax(0, 1fr); gap: 6px; cursor: default; align-content: start; min-width: 0; }
+.optl { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 10px; cursor: pointer; }
+.optl > input { margin: 5px 0 0; width: 15px; height: 15px; }
+.opt.optw > .ox, .opt.optw > .more, .opt.optw > .panels { margin-left: 25px; }
+.ox { display: grid; gap: 2px; font-size: 13px; color: var(--text-2); margin-top: 4px; }
+.ox > span { display: block; }
+.ox > span b { color: var(--text-3); font-weight: 700; margin-right: 4px; }
+.ox .up b { color: var(--ok-text); } .ox .cost b { color: var(--bad-text); }
+.ofx, .ox > .ofx { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 2px; }
+/* 分组卡：对照式的点（现在 → 改成）、目标让出图、依赖 */
+.glegend { font-size: 13px; color: var(--text-2); }
+.pdiff { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 6px; align-items: stretch; }
+.pd { border: 1px solid var(--border); border-radius: 8px; padding: 5px 10px; font-size: 14px; min-width: 0; overflow-wrap: anywhere; background: var(--surface); }
+.pd small { display: block; font-size: 12px; color: var(--text-3); font-weight: 700; }
+.pd.to { border-color: var(--accent-border); border-width: 1.5px; font-weight: 600; }
+.parr { align-self: center; color: var(--text-3); font-weight: 700; }
+@media (max-width: 560px) { .pdiff { grid-template-columns: minmax(0, 1fr); } .parr { transform: rotate(90deg); justify-self: start; margin-left: 12px; } }
+.parea { font-size: 15.5px; font-weight: 700; }
+.pt-line { display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: center; }
+.pd small { display: inline; margin-right: 6px; }
+.pact .pdet { margin-left: auto; }
+.pt:has(> .pdiff) { gap: 8px; padding: 12px 14px; }
+.pan.k-detail { display: grid; gap: 8px; padding: 0; background: transparent; border: 0; max-width: 760px; }
+.pan.k-detail > .pan { animation: none; }
+.pan.k-tbl > b { display: block; font-size: 13px; margin-bottom: 6px; }
+@media (max-width: 560px) { .pact .pdet { margin-left: 0; } }
+.psub { font-size: 13px; color: var(--text-2); }
+.plose, .pno { font-size: 13.5px; }
+.plose b { color: var(--warn-text); margin-right: 6px; }
+.pno b { color: var(--text-3); margin-right: 6px; }
+.pneed { font-size: 12px; border: 1px solid var(--accent-border); color: var(--accent); border-radius: 99px; padding: 0 8px; }
+.pneed.broken { border-color: var(--bad); color: var(--bad-text); background: var(--bad-bg); font-weight: 700; }
+.punsure { font-size: 12px; border: 1px dashed var(--warn); color: var(--warn-text); border-radius: 99px; padding: 0 8px; font-weight: 700; }
+.pgoal { font-size: 12px; border: 1px solid var(--border-strong); color: var(--text-2); border-radius: 99px; padding: 0 8px; }
+.lmap { display: grid; grid-template-columns: max-content repeat(var(--n), minmax(14px, 36px)); gap: 5px 2px; align-items: center; font-size: 12.5px; max-width: 100%; overflow-x: auto; }
+.lmap .lh { text-align: center; font-weight: 700; color: var(--text-3); font-family: var(--font-mono); line-height: 22px; }
+.lmap .lh.u { border: 1.5px dashed var(--warn); border-radius: 50%; color: var(--warn-text); }
+.lmap .lg { font-weight: 600; color: var(--text-2); padding-right: 10px; }
+.lmap .ld { justify-self: center; width: 8px; height: 8px; border-radius: 50%; background: var(--border-strong); }
+.lmap .ld.on { width: 13px; height: 13px; background: var(--warn-solid); }
+.lmap .ld.q { background: transparent; border: 1.5px dashed var(--border-strong); }
+.lmap-k { font-size: 12.5px; color: var(--text-3); }
+</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;600;700&family=Noto+Serif+SC:wght@600;700&family=JetBrains+Mono:wght@500;700&display=swap">
+
+<div id="tip" role="tooltip"></div>
+<div id="toast" role="status" aria-live="polite"></div>
+
+<header class="top">
+  <div class="top-in">
+    <div class="brand"><span class="badge-round">{{ROUND}}</span><strong>{{HEADER}} · 审批台</strong></div>
+    <nav class="nav-pills" aria-label="页面分节">
+      <a href="#sec-start">从零看懂</a><a href="#sec-sandbox">沙盘</a><a href="#sec-objs">对象</a><a href="#sec-items">条目</a><a href="#sec-gloss">附录</a><a href="#sec-export">提交</a>
+    </nav>
+    <div class="top-actions">
+      <div class="progress"><span id="count">已表态 0/0</span><div class="pbar"><div id="bar"></div></div><span class="draft-state" id="draft-state" aria-live="polite"></span></div>
+      <button class="btn" id="approveAllBtn" type="button">✅ 一键通过未填项（按推荐方案）</button>
+      <button class="btn btn-primary" id="exportBtn" type="button">📤 提交反馈（导出 md）</button>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="sec" id="sec-start">
+    <div class="sec-head">
+      <span class="eyebrow">STEP 0 · 从零看懂</span>
+      <h2>这一页要你决定什么</h2>
+      <div class="pbrief" id="pbrief" hidden></div>
+      <div class="lead" id="lead">{{INTRO}}{{LEAD}}</div>
+    </div>
+    <div class="howto" id="howto">
+      <div id="howto-1"><b>1 先看这一节</b>知道这一轮要你决定什么、处在整个评审的哪一步。</div>
+      <div id="howto-2"><b>2 看沙盘</b>用图理解这一轮涉及的东西怎么流动，点方框看细节。</div>
+      <div id="howto-3"><b>3 逐条表态</b>用每张卡上的按钮表态，想法写在评论框里。</div>
+      <div id="howto-4"><b>4 遇到虚线词</b>鼠标停在上面看解释，附录里有全部名词和来源。</div>
+      <div id="howto-5"><b>5 提交</b>点“提交反馈”，回对话说“反馈完成”，我会读取并落盘。</div>
+    </div>
+    <div class="where" id="where">
+      <div class="panel" id="agenda-panel">
+        <h3 id="agenda-title">议程：本轮处理的议题</h3>
+        <div class="agenda" id="agenda"></div>
+        <div class="legend" id="agenda-legend"><span class="ag now" style="padding:2px 8px">本轮</span><span class="ag part" style="padding:2px 8px">本轮先定一部分</span><span class="ag done" style="padding:2px 8px">已定</span><span class="ag" style="padding:2px 8px">后续轮次</span></div>
+      </div>
+      <div class="panel" id="tcond-panel">
+        <h3 id="tcond-title">什么时候算完成</h3>
+        <div class="tlist" id="tlist"></div>
+      </div>
+    </div>
+    <div id="prev-wrap"></div>
+    <div id="deltas-wrap" style="display:grid;gap:16px;">
+      <div class="sec-head"><h3 id="deltas-title">本轮最关键的几件事（点击跳到对应条目）</h3></div>
+      <div class="deltas" id="deltas"></div>
+    </div>
+    <div class="legend" id="legend"></div>
+  </section>
+
+  <section class="sec" id="sec-sandbox">
+    <div class="sec-head">
+      <span class="eyebrow">STEP 1 · 沙盘</span>
+      <h2 id="sb-title">这一轮涉及的东西怎么流动</h2>
+      <p class="lead" id="sb-lead">左边切换视角：全景看整体，流程看一条线，对象看某一个东西从哪来、到哪去。虚线表示本轮还没定。点击连线上的标签可以跳到相关条目。</p>
+    </div>
+    <div class="sandbox">
+      <div class="sb-side" id="sb-side"></div>
+      <div class="stage">
+        <div class="obj-bar" id="obj-bar" aria-label="按对象聚焦"></div>
+        <div class="svg-scroll"><svg class="diagram-svg" id="svg" viewBox="0 0 1200 575" role="img" aria-label="信息流图"></svg></div>
+        <div class="spot" id="spot"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec" id="sec-objs">
+    <div class="sec-head">
+      <span class="eyebrow">STEP 2 · 对象</span>
+      <h2 id="obj-title">涉及哪些东西，谁能改</h2>
+      <p class="lead" id="obj-lead">点任一行，沙盘会切到这个对象的视角。</p>
+    </div>
+    <div class="tbl-wrap"><table class="objs"><thead><tr id="obj-head"><th>名称</th><th>类别</th><th>是什么</th><th>谁产生</th><th>谁能改</th><th>状态变化</th><th>当前状态</th></tr></thead><tbody id="obj-rows"></tbody></table></div>
+  </section>
+
+  <section class="sec" id="sec-items">
+    <div class="sec-head">
+      <span class="eyebrow">STEP 3 · 逐条表态</span>
+      <h2 id="items-title">待审批条目</h2>
+    </div>
+    <!-- v3.7.1：审批路线放在条目一节的开头、卡片之前；v3.7 放在 STEP 0，把沙盘往下推了 660–1580px -->
+    <div class="route" id="route" hidden></div>
+    <div class="filters" id="filters"></div>
+    <div class="items-layout"><nav class="toc" id="toc" aria-label="条目与进度"></nav><div id="items" style="display:grid;gap:14px;min-width:0;"></div></div>
+    <div class="card" style="border-style:dashed;">
+      <h3>整体意见（可选）</h3>
+      <p class="from" id="overall-hint">对本轮整体，或者我漏掉的问题，写在这里。</p>
+      <textarea id="overall" aria-label="整体意见"></textarea>
+    </div>
+  </section>
+
+  <section class="sec" id="sec-gloss">
+    <div class="sec-head"><span class="eyebrow">STEP 4 · 附录</span><h2>代号索引</h2><p class="lead">本页出现的所有代号。正文里鼠标停在紫色代号上就能看到这里的解释，点击会跳到这里。</p></div>
+    <div id="code-index"></div>
+    <div class="sec-head" id="gloss-head"><h2>名词解释</h2></div>
+    <div class="gloss" id="gloss"></div>
+    <div id="srcs-wrap" style="display:grid;gap:16px;">
+      <div class="sec-head"><h2 id="srcs-title">来源</h2><p class="lead" id="srcs-lead">条目里引用的来源；正文里鼠标停在来源编号上也能看到。</p></div>
+      <div class="srcs" id="srcs"></div>
+    </div>
+  </section>
+
+  <section class="sec" id="sec-export">
+    <div class="sec-head">
+      <span class="eyebrow">STEP 5 · 提交</span>
+      <h2>提交【提案 ↔ 反馈对照】</h2>
+      <p class="lead" id="export-lead"></p>
+    </div>
+    <div class="sumcards" id="sumcards"></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <button class="btn btn-primary" type="button" onclick="triggerFullExport(false)">📤 提交反馈（导出 md）</button>
+      <button class="btn" type="button" onclick="copyMarkdownToClipboard()">📋 一键复制 Markdown 内容</button>
+      <button class="btn" type="button" id="localExportBtn" onclick="triggerFullExport(true)">📁 本地导出 / 更换保存文件夹</button>
+    </div>
+    <div id="save-target"></div>
+    <textarea id="md-preview" readonly aria-label="反馈 Markdown 预览"></textarea>
+  </section>
+</main>
+
+<script>
+/*__DATA__*/
+
+/* ================= v3.5：轮次数据的可选项与默认值 =================
+   必需：ROUND、TOPIC、ITEMS；CODES 由 codes.js 提供（可以是 {}）。其余全局量都可以省略，省略时对应模块不显示。
+   AD_CFG 由 build.py 从 cfg 注入：REVIEW_DIR、REVIEW_PATH_HINT、TP、TF、AGENDA_TITLE、TCOND_TITLE、LEGEND_CHIPS、PAGE_TEXT。
+   完整的数据契约见 round_template/README.md。 */
+const AD_OPT = (typeof AD_CFG !== "undefined" && AD_CFG) || {};
+const AD_DATA = {
+  terms: typeof TERMS !== "undefined" ? TERMS : {},
+  sources: typeof SOURCES !== "undefined" ? SOURCES : {},
+  obj: typeof OBJ !== "undefined" ? OBJ : {},
+  flows: typeof FLOWS !== "undefined" ? FLOWS : [],
+  pano: typeof PANO_EDGES !== "undefined" ? PANO_EDGES : [],
+  viewAll: typeof viewAll === "function" ? viewAll : null,
+  spotAll: typeof SPOT_ALL !== "undefined" ? SPOT_ALL : "",
+  agenda: typeof AGENDA !== "undefined" ? AGENDA : [],
+  tcond: typeof TCOND !== "undefined" ? TCOND : [],
+  deltas: typeof DELTAS !== "undefined" ? DELTAS : [],
+  prev: typeof PREV !== "undefined" ? PREV : null,
+  noauto: typeof TERMS_NOAUTO !== "undefined" ? TERMS_NOAUTO : [],
+  srcAuto: typeof SRC_AUTO !== "undefined" ? SRC_AUTO : [],
+  /* 文字覆盖：键是元素 id，值是 innerHTML。后者覆盖前者：cfg 的 PAGE_TEXT < 数据里的 SANDBOX_TEXT（v3.4 的旧名）< 数据里的 PAGE_TEXT */
+  text: Object.assign({}, AD_OPT.PAGE_TEXT || {}, typeof SANDBOX_TEXT !== "undefined" ? SANDBOX_TEXT : {}, typeof PAGE_TEXT !== "undefined" ? PAGE_TEXT : {}),
+};
+/* v3.7.1：沙盘数据的形状。手写的 OBJ / FLOWS / PANO_EDGES 错一处，整页脚本就会出错（卡片也画不出来）。
+   这里先收拾：lines 写成一句话也认；画不了的对象、栏和连线不画；问题都记下来，__lint() 当作错误报出 */
+const AD_SB_ERR = [];
+(() => {
+  const L5 = ["goal", "human", "gate", "agent", "out"], O = AD_DATA.obj;
+  if (!O || typeof O !== "object" || Array.isArray(O)) { AD_SB_ERR.push("OBJ 要是 {对象 id: {name, layer, lines, …}}"); AD_DATA.obj = {}; }
+  Object.entries(AD_DATA.obj).forEach(([id, o]) => {
+    if (!o || typeof o !== "object" || Array.isArray(o)) { AD_SB_ERR.push(`OBJ 的 ${id} 要是 {name, layer, lines, …}`); AD_DATA.obj[id] = { name: String(id), layer: "agent", lines: [] }; return; }
+    if (typeof o.name !== "string" || !o.name.trim()) { AD_SB_ERR.push(`OBJ 的 ${id} 没写 name`); o.name = String(id); }
+    if (!L5.includes(o.layer)) { AD_SB_ERR.push(`OBJ 的 ${id}：layer 只能是 ${L5.join(" / ")}（现在是 ${JSON.stringify(o.layer)}）`); o.layer = "agent"; }
+    if (o.lines !== undefined && !(Array.isArray(o.lines) && o.lines.every(l => typeof l === "string"))) { AD_SB_ERR.push(`OBJ 的 ${id}：lines 要是几句短话的数组，如 ["每人每周一份", "周五截止"]`); o.lines = typeof o.lines === "string" ? [o.lines] : (Array.isArray(o.lines) ? o.lines.filter(l => typeof l === "string") : []); }
+  });
+  if (!Array.isArray(AD_DATA.flows)) { AD_SB_ERR.push("FLOWS 要是数组 [{id, name, desc, cols, links}, …]"); AD_DATA.flows = []; }
+  const fids = new Set();
+  AD_DATA.flows = AD_DATA.flows.filter((f, i) => {
+    const fn = `FLOWS 第 ${i + 1} 条${f && f.id ? `（${f.id}）` : ""}`;
+    if (!f || typeof f !== "object" || !f.id) { AD_SB_ERR.push(`${fn}要是 {id, name, desc, cols, links}`); return false; }
+    if (fids.has(f.id)) { AD_SB_ERR.push(`${fn}：id 和前面的重复`); return false; } fids.add(f.id);
+    if (!Array.isArray(f.cols) || f.cols.length < 1 || f.cols.length > 3 || !f.cols.every(Array.isArray)) { AD_SB_ERR.push(`${fn}：cols 最多三栏，如 [[上游…], [处理…], [下游…]]（两栏也行）`); return false; }
+    const at = {};
+    f.cols = f.cols.map((c, ci) => c.filter(id => {
+      if (!AD_DATA.obj[id]) { AD_SB_ERR.push(`${fn}：cols 里的 ${id} 不在 OBJ 里`); return false; }
+      if (at[id] !== undefined) { AD_SB_ERR.push(`${fn}：${id} ${at[id] === ci ? `在第 ${ci + 1} 栏里写了两次` : `在第 ${at[id] + 1} 栏和第 ${ci + 1} 栏都出现了`}；一条流程里一个对象只画一次（往返就拆成两个对象，或者交给卡片上的 seq 图）`); return false; }
+      at[id] = ci; return true;
+    }));
+    if (!Array.isArray(f.links)) AD_SB_ERR.push(`${fn}：links 要是数组 [[从, 到, 标签, 条目 id], …]`);
+    f.links = (Array.isArray(f.links) ? f.links : []).filter((l, j) => {
+      const ln = `${fn}第 ${j + 1} 条连线${Array.isArray(l) ? `（${l[0]} → ${l[1]}）` : ""}`;
+      if (!Array.isArray(l) || at[l[0]] === undefined || at[l[1]] === undefined) { AD_SB_ERR.push(`${ln}：两端都要在这条流程的 cols 里`); return false; }
+      if (at[l[1]] !== at[l[0]] + 1) { AD_SB_ERR.push(`${ln}：只能从第 n 栏连到第 n+1 栏（现在是第 ${at[l[0]] + 1} 栏到第 ${at[l[1]] + 1} 栏）`); return false; }
+      if (typeof l[2] !== "string" || !l[2].trim()) { AD_SB_ERR.push(`${ln}：第三项要写连线上的标签`); return false; }
+      if (l[3] != null && typeof l[3] !== "string") { AD_SB_ERR.push(`${ln}：第四项是相关卡片的编号，要写成文字`); return false; }
+      return true;
+    });
+    return true;
+  });
+  if (!Array.isArray(AD_DATA.pano)) { AD_SB_ERR.push("PANO_EDGES 要是数组 [[从, 到, 标签], …]"); AD_DATA.pano = []; }
+  AD_DATA.pano = AD_DATA.pano.filter((e, j) => {
+    const en = `PANO_EDGES 第 ${j + 1} 条${Array.isArray(e) ? `（${e[0]} → ${e[1]}）` : ""}`;
+    if (!Array.isArray(e) || !AD_DATA.obj[e[0]] || !AD_DATA.obj[e[1]]) { AD_SB_ERR.push(`${en}：两端都要在 OBJ 里`); return false; }
+    if (typeof e[2] !== "string") { AD_SB_ERR.push(`${en}：第三项要写连线上的标签`); e[2] = ""; }
+    return true;
+  });
+})();
+/* 浏览器存储键：前面加 cfg 的 PROJECT。本地打开的页面在浏览器里共用一份存储，不加前缀时不同项目的同一轮会串答案 */
+const AD_PROJECT = String(AD_OPT.PROJECT || "");
+const AD_KEY = (AD_PROJECT ? AD_PROJECT + "/" : "") + (typeof KEY !== "undefined" ? KEY : `${ROUND}-feedback-v1`);
+const AD_PROPOSAL = typeof PROPOSAL_FILE !== "undefined" ? PROPOSAL_FILE : (AD_OPT.PROPOSAL_FILE || `${ROUND}_${TOPIC}_proposal.html`);
+const AD_TURN_P = typeof TURN_PROPOSAL !== "undefined" ? TURN_PROPOSAL : (AD_OPT.TP || "");
+const AD_TURN_F = typeof TURN_FEEDBACK !== "undefined" ? TURN_FEEDBACK : (AD_OPT.TF || "");
+/* 数据里声明了 TURN_PROPOSAL / TURN_FEEDBACK 时，反馈 md 的轮次行和 v3.4 逐字相同 */
+const AD_TURN_DATA = typeof TURN_PROPOSAL !== "undefined" || typeof TURN_FEEDBACK !== "undefined";
+/* 评审文件夹（项目内相对路径）。build.py 已经规范化；空串表示项目根目录。没有 AD_CFG 的页面按 skill 的约定 interview/reviews */
+const AD_REVIEW_DIR = (AD_OPT.REVIEW_DIR !== undefined ? String(AD_OPT.REVIEW_DIR) : "interview/reviews").split(/[\\/]+/).filter(p => p && p !== ".").join("/");
+const AD_REVIEW_PREFIX = AD_REVIEW_DIR ? AD_REVIEW_DIR + "/" : "";
+/* 对象表的列名，同时用在对象视角和下方说明里（数据里的 OBJ_LABELS 可以只改其中几项） */
+const AD_OBJ_LABELS = Object.assign({ name: "名称", layer: "类别", lines: "是什么", producer: "谁产生", editor: "谁能改", life: "状态变化", status: "当前状态" }, typeof OBJ_LABELS !== "undefined" ? OBJ_LABELS : {});
+/* 分组卡里高亮的“落点”（target）；默认只有“改基线” */
+const AD_TARGET_BASE = typeof TARGET_BASE !== "undefined" ? TARGET_BASE : ["改基线"];
+const HAS_SB = Object.keys(AD_DATA.obj).length > 0;
+/* v3.7.1：没有沙盘时数据用 NO_SANDBOX 写一句为什么，页面在“从零看懂”第 2 步显示 */
+const AD_NO_SB = typeof NO_SANDBOX !== "undefined" ? NO_SANDBOX : undefined, AD_NO_SB_TEXT = typeof AD_NO_SB === "string" ? AD_NO_SB.trim() : "";
+const AD_NO_SB_SHOW = AD_NO_SB_TEXT.replace(/^(这一轮|本轮)?没有沙盘[：:，,。；;\s]*/, "");   /* 页面上已经有“这一轮没有沙盘”，理由里不重复；只写了这一句的，不算理由 */
+/* v3.7：页面速览 BRIEF、目标顺序 GOALS、cfg 的 BUDGET（"warn" 时字数超了只提示，只用于重建旧轮次）。
+   选项可以写成对象 {k, t, d, rec, short, up, cost, then, fx, undo, more}：这里换回 [键, 标题, 说明, 是否推荐]，其余放进 it._ox，旧代码不用改 */
+const AD_PBRIEF = typeof BRIEF !== "undefined" && Array.isArray(BRIEF) ? BRIEF : null;
+const AD_GOALS = typeof GOALS !== "undefined" && Array.isArray(GOALS) ? GOALS : null;
+const AD_BUDGET_MODE = AD_OPT.BUDGET === "warn" ? "warn" : "fail";
+ITEMS.forEach(it => { if (!Array.isArray(it.opts) || it.opts.every(Array.isArray)) return; it._ox = {}; it.opts = it.opts.map(o => { if (Array.isArray(o) || !o || typeof o !== "object") return o; const k = String(o.k); it._ox[k] = o; return [k, o.t || "", o.d || "", !!o.rec]; }); });
+
+/* ================= 代号表补充：本页条目 ================= */
+const adFirstSentence = h => { const t = String(h || "").replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim(); if (!t) return ""; const i = t.search(/[。！？!?]/); const s = i >= 0 ? t.slice(0, i + 1) : t; return s.length > 140 ? s.slice(0, 139) + "…" : s; };
+ITEMS.forEach(it => { if (!CODES[it.id]) CODES[it.id] = [it.title, adFirstSentence(it.plain || it.context), "审批条目 · 本页"]; });
+if (!CODES[ROUND]) CODES[ROUND] = [TOPIC + "（本轮）", "本页所在的审批轮", "审批轮 · 本页"];
+/* 提交说明里的对话轮次（TP / TF）：反馈轮次在构建时还没发生，登记文件里通常没有，这里给它们补上解释 */
+[[AD_TURN_P, "提出本页提案的那一轮对话"], [AD_TURN_F, "收回本页反馈的那一轮对话"]].forEach(([t, d]) => { if (t && /^[A-Za-z]+[-_]?\d+$/.test(t) && !CODES[t]) CODES[t] = [d, "", "对话轮次 · 本页"]; });
+AD_DATA.flows.forEach(f => { if (!CODES[f.id]) CODES[f.id] = [f.name + "（沙盘流程）", f.desc || "", "沙盘流程 · 本页"]; });
+/*__CODELINKER__*/
+
+/* ================= 状态 ================= */
+let ST = { items: {}, overall: "" };
+try {
+  let raw = localStorage.getItem(AD_KEY);
+  /* 托管页面（每个 Artifact 有自己的存储，不会串项目）没有新键时，从 v3.6 之前的旧键接着读一次；本地文件共用一份存储，不能这样读 */
+  if (!raw && AD_PROJECT && window.claude && typeof window.claude.use === "function") raw = localStorage.getItem(typeof KEY !== "undefined" ? KEY : `${ROUND}-feedback-v1`);
+  if (raw) ST = Object.assign(ST, JSON.parse(raw));
+} catch (e) {}
+function save() { ST.saved_at = new Date().toISOString(); try { localStorage.setItem(AD_KEY, JSON.stringify(ST)); } catch (e) {} refreshAll(); if (typeof adDraftSchedule === "function") adDraftSchedule(); }
+/* 托管模式的草稿：导出模块用这三个函数读写整份回答（没有它们的旧页面不存草稿） */
+function adGetState() { return ST; }
+function adPersistState() { try { localStorage.setItem(AD_KEY, JSON.stringify(ST)); } catch (e) {} }
+function adSetState(s) {
+  ST = Object.assign({ items: {}, overall: "" }, s || {});
+  try { localStorage.setItem(AD_KEY, JSON.stringify(ST)); } catch (e) {}
+  const ov = document.getElementById("overall"); ov.value = ST.overall || ""; autoGrow(ov);
+  renderItems(); refreshAll();
+}
+function S(id) { return ST.items[id] || (ST.items[id] = { status: null, choice: null, multi: [], comment: "" }); }
+function showToast(msg) { const t = document.getElementById("toast"); t.textContent = msg; t.classList.add("on"); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove("on"), 4200); }
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+/* 正文里自动链接的来源名：数据里的 SRC_AUTO（来源编号的数组），只链接 SOURCES 里有的 */
+const AD_SRC_KEYS = AD_DATA.srcAuto.filter(k => AD_DATA.sources[k]).sort((a, b) => b.length - a.length);
+const AD_SRC_RE = AD_SRC_KEYS.length ? new RegExp("(?<![A-Za-z0-9-])(" + AD_SRC_KEYS.map(k => k.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|") + ")(?![A-Za-z0-9-》])", "g") : null;
+const linkSrc = s => {
+  if (!s) return s || "";
+  if (!AD_SRC_RE) return String(s);
+  /* 已有的 <a>…</a> 和标签原样保留，只在标签外的文字里加链接 */
+  return String(s).replace(/(<a\b[\s\S]*?<\/a>|<[^>]*>)|([^<]+)/gi, (m, tag, txt) => tag || txt.replace(AD_SRC_RE, k => `<a class="src" data-s="${esc(k)}" href="#src-${esc(k)}">${k}</a>`));
+};
+
+/* ================= 悬浮提示 ================= */
+const tip = document.getElementById("tip");
+document.addEventListener("mouseover", e => {
+  const el = e.target.closest("[data-t],[data-s],[data-c]"); if (!el) return;
+  if (el.dataset.c) { const h = adCodeTip(el); if (!h) return; tip.innerHTML = h; }
+  else if (el.dataset.t && AD_DATA.terms[el.dataset.t]) { const [d, ex] = AD_DATA.terms[el.dataset.t]; tip.innerHTML = `<b>${esc(el.dataset.t)}</b>${esc(d)}${ex ? `<i>${esc(ex)}</i>` : ""}`; }
+  else if (el.dataset.s && AD_DATA.sources[el.dataset.s]) { const [t, d] = AD_DATA.sources[el.dataset.s]; tip.innerHTML = `<b>${esc(el.dataset.s)} · ${esc(t)}</b>${esc(d)}`; }
+  else return;
+  tip.classList.add("on");
+});
+document.addEventListener("mouseout", e => { if (e.target.closest("[data-t],[data-s],[data-c]")) tip.classList.remove("on"); });
+document.addEventListener("mousemove", e => {
+  if (!tip.classList.contains("on")) return;
+  const w = tip.offsetWidth, h = tip.offsetHeight; let x = e.clientX + 14, y = e.clientY + 16;
+  if (x + w > innerWidth - 8) x = e.clientX - w - 14; if (x < 8) x = 8;
+  if (y + h > innerHeight - 8) y = e.clientY - h - 12; if (y < 8) y = 8;
+  tip.style.left = x + "px"; tip.style.top = y + "px";
+});
+
+/* ================= STEP 0：议程、完成条件、关键几件事、上一轮处理（都可省略，省略时不显示） ================= */
+const adShow = (id, on) => { const el = document.getElementById(id); if (el) el.hidden = !on; };
+if (AD_OPT.AGENDA_TITLE) document.getElementById("agenda-title").textContent = AD_OPT.AGENDA_TITLE;
+if (AD_OPT.TCOND_TITLE) document.getElementById("tcond-title").textContent = AD_OPT.TCOND_TITLE;
+document.getElementById("agenda").innerHTML = AD_DATA.agenda.map(([id, n, r]) => `<div class="ag ${r || ""}"><b>${id}</b>${n}</div>`).join("");
+document.getElementById("tlist").innerHTML = AD_DATA.tcond.map(([id, n, d]) => `<div class="tl"><b>${id}</b><span>${n}${d ? `<em>${d}</em>` : ""}</span></div>`).join("");
+adShow("agenda-panel", AD_DATA.agenda.length > 0); adShow("tcond-panel", AD_DATA.tcond.length > 0);
+adShow("where", AD_DATA.agenda.length + AD_DATA.tcond.length > 0);
+document.getElementById("where").classList.toggle("one", !(AD_DATA.agenda.length && AD_DATA.tcond.length));
+document.getElementById("deltas").innerHTML = AD_DATA.deltas.map(([n, d, id]) => `<button class="delta" type="button" onclick="jumpToItem('${id}')"><code>${id}</code><b>${n}</b><span>${d}</span></button>`).join("");
+adShow("deltas-wrap", AD_DATA.deltas.length > 0);
+const AD_PREV = AD_DATA.prev;
+if (AD_PREV && AD_PREV.rows && AD_PREV.rows.length) document.getElementById("prev-wrap").innerHTML = `<div class="panel"><h3>${AD_PREV.title}</h3><p class="from">${AD_PREV.note}</p><div class="prev">${AD_PREV.rows.map(r => `<div class="prev-row"><b>${r[0]}</b><span>${r[1]}</span><span>${r[2]}</span><span class="to ${(r.length > 4 ? (r[4] === "open" || r[4] === true) : String(r[3] || "").startsWith("R")) ? "open" : ""}">${r[3]}</span></div>`).join("")}</div></div>`;
+
+/* ================= SVG 工具 ================= */
+const COL = { goal: "#fbbf24", human: "#60a5fa", gate: "#34d399", agent: "#c084fc", out: "#f472b6", muted: "#94a3b8" };
+const LAYER_NAME = { goal: "目标层", human: "人的输入", gate: "确认关口", agent: "Agent", out: "输出视图" };
+/* 每轮可选覆盖：LAYER_NAME_X 改类别名。标题和说明的覆盖（PAGE_TEXT，旧名 SANDBOX_TEXT）在初始化的最后统一套用 */
+if (typeof LAYER_NAME_X !== "undefined") Object.assign(LAYER_NAME, LAYER_NAME_X);
+function defs() { return `<defs>${Object.entries(COL).map(([k, c]) => `<marker id="m-${k}" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,1 L10,5 L0,9 z" fill="${c}"/></marker>`).join("")}</defs>`; }
+function node(id, x, y, w, h, extraLines) {
+  const o = AD_DATA.obj[id], c = COL[o.layer]; const lines = extraLines || o.lines || [];
+  const dashed = String(o.status || "").includes("待定") ? ' stroke-dasharray="6 4"' : "";
+  let t = `<g data-node="${id}" data-box="${x},${y},${w},${h}" style="cursor:pointer" onclick="setView('obj:${id}')">`;
+  t += `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="10" fill="#111a2e" stroke="${c}" stroke-width="2"${dashed}/>`;
+  t += `<text data-in="${id}" x="${x + 12}" y="${y + 22}" fill="${c}" font-size="13.5" font-weight="700">${esc(o.name)}</text>`;
+  lines.forEach((l, i) => { if (l) t += `<text data-in="${id}" x="${x + 12}" y="${y + 42 + i * 17}" fill="#cbd5e1" font-size="11.5">${esc(l)}</text>`; });
+  return t + "</g>";
+}
+function pillW(label) { return Math.min(150, label.length * 12 + 22); }
+function pill(cx, cy, label, color, item, owner) {
+  const w = pillW(label);
+  return `<g data-pill="${esc(label)}" data-owner="${owner || ""}" data-pbox="${cx - w / 2},${cy - 11.5},${w},23"${item ? ` style="cursor:pointer" onclick="jumpToItem('${item}')"` : ""}><rect x="${cx - w / 2}" y="${cy - 11.5}" width="${w}" height="23" rx="6" fill="#0f172a" stroke="${color}" stroke-width="1.3"/><text x="${cx}" y="${cy + 4}" fill="#f8fafc" font-size="11" font-weight="600" text-anchor="middle">${esc(label)}</text></g>`;
+}
+function wire(d, color, mk, from, to, dashed) {
+  return `<path data-wire="1" data-from="${from}" data-to="${to}" d="${d}" fill="none" stroke="${color}" stroke-width="2.4" class="flow"${dashed ? ' stroke-dasharray="5 5" style="animation:none"' : ""} marker-end="url(#m-${mk})"/>`;
+}
+function hTrack(x1, x2, y, from, to, label, item, dashed) {
+  const c = COL[AD_DATA.obj[from].layer], mk = AD_DATA.obj[from].layer;
+  return wire(`M ${x1} ${y} L ${x2 - 2} ${y}`, c, mk, from, to, dashed) + `<circle cx="${x1}" cy="${y}" r="3.5" fill="${c}"/>` + pill((x1 + x2) / 2, y, label, c, item, `${from}>${to}`);
+}
+
+/* 全景 viewAll() / SPOT_ALL / PANO_EDGES 由每轮 data 提供 */
+/* ================= 泳道 ================= */
+const CX = [{ x: 24, w: 250 }, { x: 460, w: 280 }, { x: 926, w: 250 }];
+function stack(ids, ci) {
+  const out = {}, n = ids.length, gap = 26;
+  const hs = ids.map(id => Math.max(86, 44 + (AD_DATA.obj[id].lines || []).filter(Boolean).length * 17 + 10));
+  const total = hs.reduce((a, b) => a + b, 0) + gap * (n - 1); let y = Math.round((575 - total) / 2);
+  ids.forEach((id, i) => { out[id] = { x: CX[ci].x, y, w: CX[ci].w, h: hs[i] }; y += hs[i] + gap; });
+  return out;
+}
+function viewFlow(f) {
+  const pos = Object.assign({}, ...f.cols.map((ids, ci) => stack(ids, ci)));
+  let s = defs(); Object.entries(pos).forEach(([id, p]) => s += node(id, p.x, p.y, p.w, p.h));
+  // 端口分配：同一节点多条线时沿高度均分
+  const outs = {}, ins = {};
+  f.links.forEach(l => { (outs[l[0]] = outs[l[0]] || []).push(l); (ins[l[1]] = ins[l[1]] || []).push(l); });
+  const port = (arr, l, p) => { const i = arr.indexOf(l), n = arr.length; return Math.round(p.y + p.h * (i + 1) / (n + 1)); };
+  const corridors = [[], []];
+  f.links.forEach(l => {
+    const a = pos[l[0]], b = pos[l[1]], ci = f.cols.findIndex(c => c.includes(l[0]));
+    const y1 = port(outs[l[0]], l, a), y2 = port(ins[l[1]], l, b);
+    corridors[ci].push({ l, x1: a.x + a.w, y1, x2: b.x, y2, py: Math.round((y1 + y2) / 2) });
+  });
+  corridors.forEach((arr, ci) => {
+    const mx = ci === 0 ? (CX[0].x + CX[0].w + CX[1].x) / 2 : (CX[1].x + CX[1].w + CX[2].x) / 2;
+    arr.sort((p, q) => p.py - q.py);
+    for (let i = 1; i < arr.length; i++) if (arr[i].py - arr[i - 1].py < 40) arr[i].py = arr[i - 1].py + 40;
+    arr.forEach(it => {
+      const pw = pillW(it.l[2]), pxL = mx - pw / 2, pxR = mx + pw / 2, c = COL[AD_DATA.obj[it.l[0]].layer], mk = AD_DATA.obj[it.l[0]].layer;
+      const c1x = Math.round((it.x1 + pxL) / 2), c2x = Math.round((pxR + it.x2) / 2);
+      s += wire(`M ${it.x1} ${it.y1} C ${c1x} ${it.y1}, ${c1x} ${it.py}, ${pxL} ${it.py}`, c, mk, it.l[0], it.l[1]).replace(' marker-end="url(#m-' + mk + ')"', "");
+      s += wire(`M ${pxR} ${it.py} C ${c2x} ${it.py}, ${c2x} ${it.y2}, ${it.x2 - 2} ${it.y2}`, c, mk, it.l[0], it.l[1]);
+      s += pill(mx, it.py, it.l[2], c, it.l[3], `${it.l[0]}>${it.l[1]}`);
+    });
+  });
+  return s;
+}
+
+/* ================= 对象视角 ================= */
+const EDGES = (() => {
+  const base = AD_DATA.pano.slice();
+  AD_DATA.flows.forEach(f => f.links.forEach(l => base.push([l[0], l[1], l[2]])));
+  const seen = new Set(); return base.filter(e => { const k = e[0] + ">" + e[1]; if (seen.has(k)) return false; seen.add(k); return true; });
+})();
+function viewObj(id) {
+  const o = AD_DATA.obj[id], c = COL[o.layer];
+  const ups = EDGES.filter(e => e[1] === id), downs = EDGES.filter(e => e[0] === id);
+  let s = defs();
+  const side = (list, x, isUp) => {
+    const n = list.length; if (!n) { s += `<text x="${x + 157}" y="292" fill="#64748b" font-size="12" text-anchor="middle">${isUp ? "没有上游" : "没有下游"}</text>`; return; }
+    const gap = 14, h = Math.min(74, Math.floor((480 - gap * (n - 1)) / n)); let y = Math.round((575 - (h * n + gap * (n - 1))) / 2);
+    list.forEach(e => {
+      const oid = isUp ? e[0] : e[1], oo = AD_DATA.obj[oid], cc = COL[oo.layer];
+      s += `<g data-node="${oid}" data-box="${x},${y},315,${h}" style="cursor:pointer" onclick="setView('obj:${oid}')"><rect x="${x}" y="${y}" width="315" height="${h}" rx="9" fill="#111a2e" stroke="${cc}" stroke-width="1.8"/>`;
+      s += `<text data-in="${oid}" x="${x + 12}" y="${y + Math.min(24, h / 2)}" fill="${cc}" font-size="13" font-weight="700">${esc(oo.name)}</text>`;
+      if (h >= 48) s += `<text data-in="${oid}" x="${x + 12}" y="${y + Math.min(46, h - 10)}" fill="#cbd5e1" font-size="11.5">经由：${esc(e[2])}</text>`;
+      s += "</g>";
+      const cy = y + h / 2;
+      if (isUp) s += wire(`M ${x + 315} ${cy} C 390 ${cy}, 390 285, 428 285`, cc, oo.layer, oid, id);
+      else s += wire(`M 770 285 C 812 285, 812 ${cy}, ${x - 2} ${cy}`, c, o.layer, id, oid);
+      y += h + gap;
+    });
+  };
+  s += `<text x="189" y="40" fill="#94a3b8" font-size="12" text-anchor="middle">从哪来 / 由谁产生</text><text x="1010" y="40" fill="#94a3b8" font-size="12" text-anchor="middle">到哪去 / 被谁使用</text>`;
+  side(ups, 32, true); side(downs, 853, false);
+  const L = AD_OBJ_LABELS, rows = [[L.layer, LAYER_NAME[o.layer]], [L.producer, o.producer], [L.editor, o.editor], [L.life, o.life], [L.status, o.status]];
+  const lw = Math.min(144, Math.max(66, Math.max(...rows.map(([k]) => Math.min(11, String(k).length))) * 12 + 12)), vmax = Math.max(6, Math.min(22, Math.floor((316 - lw) / 11.5) + 1));
+  s += `<g data-node="${id}" data-box="430,120,340,330"><rect x="430" y="120" width="340" height="330" rx="12" fill="#111a2e" stroke="${c}" stroke-width="2.6"/>`;
+  s += `<text data-in="${id}" x="450" y="152" fill="${c}" font-size="17" font-weight="800">${esc(o.name)}</text>`;
+  let yy = 178; (o.lines || []).filter(Boolean).slice(0, 4).forEach(l => { s += `<text data-in="${id}" x="450" y="${yy}" fill="#e2e8f0" font-size="12">${esc(l)}</text>`; yy += 18; });
+  yy += 8; rows.forEach(([k, v]) => { s += `<text data-in="${id}" x="450" y="${yy}" fill="#94a3b8" font-size="11.5">${esc(clip(String(k), 11))}</text><text data-in="${id}" x="${450 + lw}" y="${yy}" fill="#e2e8f0" font-size="11.5">${esc(clip(String(v || "—"), vmax))}</text>`; yy += 21; });
+  s += (o.item ? `<g style="cursor:pointer" onclick="jumpToItem('${o.item}')"><rect x="450" y="408" width="170" height="28" rx="7" fill="#1e3a8a" stroke="#60a5fa"/><text data-in="${id}" x="535" y="427" fill="#fff" font-size="12" font-weight="700" text-anchor="middle">看相关条目 ${o.item}</text></g>` : "") + "</g>";
+  return s;
+}
+function clip(s, n) { return s.length > n ? s.slice(0, n - 1) + "…" : s; }
+
+/* ================= 视图切换 ================= */
+let VIEW = "all";
+function setView(v) {
+  VIEW = v; const svg = document.getElementById("svg"), spot = document.getElementById("spot");
+  if (v === "all") { if (!AD_DATA.viewAll) return; svg.innerHTML = AD_DATA.viewAll(); spot.innerHTML = AD_DATA.spotAll; }
+  else if (v.startsWith("flow:")) { const f = AD_DATA.flows.find(x => x.id === v.slice(5)); if (!f) return; svg.innerHTML = viewFlow(f); const its = [...new Set(f.links.map(l => l[3]))].filter(Boolean); spot.innerHTML = `<div><b>${f.id} ${f.name}：</b>${f.desc}</div><div>${its.map(i => `<button class="jump" type="button" onclick="jumpToItem('${i}')">${i}</button>`).join("")}</div>`; }
+  else { const id = v.slice(4), o = AD_DATA.obj[id]; if (!o) return; svg.innerHTML = viewObj(id); spot.innerHTML = `<div><b>${o.name}：</b>${(o.lines || []).filter(Boolean).join("；")}。</div><div>${AD_OBJ_LABELS.producer}：${o.producer || "—"}；${AD_OBJ_LABELS.editor}：${o.editor || "—"}；${AD_OBJ_LABELS.status}：${o.status || "—"}。</div><div>${o.item ? `<button class="jump" type="button" onclick="jumpToItem('${o.item}')">看相关条目 ${o.item}</button>` : ""}${AD_DATA.viewAll ? `<button class="jump" type="button" onclick="setView('all')">回到全景</button>` : ""}</div>`; }
+  adLinkCodes(spot); adRenderCodeIndex();
+  document.querySelectorAll(".sb-btn").forEach(b => b.classList.toggle("on", b.dataset.v === v));
+  document.querySelectorAll(".obj-chip").forEach(b => b.classList.toggle("on", b.dataset.v === v));
+}
+/* 沙盘可省略：数据里没有 OBJ（或为空）时，沙盘和对象两节都不显示；没有 viewAll 时不显示“全景” */
+document.getElementById("sb-side").innerHTML =
+  (AD_DATA.viewAll ? `<div class="sb-group"><h4>整体</h4><button class="sb-btn" type="button" data-v="all" onclick="setView('all')">全景</button></div>` : "") +
+  (AD_DATA.flows.length ? `<div class="sb-group"><h4>按流程看</h4>${AD_DATA.flows.map(f => `<button class="sb-btn" type="button" data-v="flow:${f.id}" onclick="setView('flow:${f.id}')"><small>${f.id}</small>${f.name}</button>`).join("")}</div>` : "");
+document.getElementById("obj-bar").innerHTML = Object.entries(AD_DATA.obj).map(([id, o]) => `<button class="obj-chip" type="button" data-v="obj:${id}" onclick="setView('obj:${id}')">${o.name}</button>`).join("");
+document.getElementById("obj-rows").innerHTML = Object.entries(AD_DATA.obj).map(([id, o]) => `<tr onclick="setView('obj:${id}');document.getElementById('sec-sandbox').scrollIntoView({behavior:'smooth'})"><td><b>${o.name}</b></td><td><span class="layer layer-${o.layer}">${LAYER_NAME[o.layer]}</span></td><td>${(o.lines || []).filter(Boolean).join("；")}</td><td>${o.producer || ""}</td><td>${o.editor || ""}</td><td>${o.life || ""}</td><td>${o.status || ""}</td></tr>`).join("");
+const AD_HAS_SIDE = !!document.getElementById("sb-side").innerHTML.trim();
+document.querySelector(".sandbox").classList.toggle("noside", !AD_HAS_SIDE);
+if (HAS_SB) document.getElementById("sb-lead").textContent = `${AD_HAS_SIDE ? "左边" : "上方"}切换视角：${[AD_DATA.viewAll ? "全景看整体" : "", AD_DATA.flows.length ? "流程看一条线" : "", "对象看某一个东西从哪来、到哪去"].filter(Boolean).join("，")}。虚线表示本轮还没定。点击连线上的标签可以跳到相关条目。`;
+adShow("sec-sandbox", HAS_SB); adShow("sec-objs", HAS_SB);
+document.querySelectorAll('.nav-pills a[href="#sec-sandbox"], .nav-pills a[href="#sec-objs"]').forEach(a => { a.hidden = !HAS_SB; });
+
+/* 自检：碰撞检测（供 Playwright 调用） */
+window.__views = () => HAS_SB ? [...(AD_DATA.viewAll ? ["all"] : []), ...AD_DATA.flows.map(f => "flow:" + f.id), ...Object.keys(AD_DATA.obj).map(k => "obj:" + k)] : [];
+window.__check = () => {
+  const svg = document.getElementById("svg"), errs = [];
+  const box = s => s.split(",").map(Number);
+  const nodes = [...svg.querySelectorAll("[data-box]")].map(g => ({ id: g.dataset.node, b: box(g.dataset.box) }));
+  const pills = [...svg.querySelectorAll("[data-pbox]")].map(g => ({ id: g.dataset.pill, owner: g.dataset.owner, b: box(g.dataset.pbox) }));
+  const ov = (a, b, p) => !(a[0] + a[2] + p <= b[0] || b[0] + b[2] + p <= a[0] || a[1] + a[3] + p <= b[1] || b[1] + b[3] + p <= a[1]);
+  pills.forEach((p, i) => { nodes.forEach(n => { if (ov(p.b, n.b, 3)) errs.push(`pill-node ${p.id}/${n.id}`); }); pills.slice(i + 1).forEach(q => { if (ov(p.b, q.b, 4)) errs.push(`pill-pill ${p.id}/${q.id}`); }); });
+  nodes.forEach((n, i) => nodes.slice(i + 1).forEach(m => { if (ov(n.b, m.b, 0)) errs.push(`node-node ${n.id}/${m.id}`); }));
+  svg.querySelectorAll("[data-wire]").forEach(w => {
+    const L = w.getTotalLength();
+    for (let d = 0; d <= L; d += 3) { const pt = w.getPointAtLength(d);
+      nodes.forEach(n => { if (n.id === w.dataset.from || n.id === w.dataset.to) return; const b = n.b; if (pt.x > b[0] + 1 && pt.x < b[0] + b[2] - 1 && pt.y > b[1] + 1 && pt.y < b[1] + b[3] - 1) errs.push(`wire-node ${w.dataset.from}>${w.dataset.to} through ${n.id}`); });
+      pills.forEach(p => { if (p.owner === `${w.dataset.from}>${w.dataset.to}`) return; const b = p.b; if (pt.x > b[0] + 2 && pt.x < b[0] + b[2] - 2 && pt.y > b[1] + 2 && pt.y < b[1] + b[3] - 2) errs.push(`wire-pill ${w.dataset.from}>${w.dataset.to} through ${p.id}`); });
+    }
+  });
+  svg.querySelectorAll("text[data-in]").forEach(t => { const g = t.closest("[data-box]"); if (!g) return; const b = box(g.dataset.box), r = t.getBBox(); if (r.x < b[0] + 2 || r.x + r.width > b[0] + b[2] - 2 || r.y < b[1] || r.y + r.height > b[1] + b[3]) errs.push(`text-overflow ${t.dataset.in}: ${t.textContent}`); });
+  /* v3.7.1：方框和标签不能跑出画布（一栏放太多对象时会）；标签的字不能比标签宽（标签太长时会） */
+  [...nodes, ...pills].forEach(n => { const b = n.b; if (b[0] < 0 || b[1] < 0 || b[0] + b[2] > 1200 || b[1] + b[3] > 575) errs.push(`off-canvas ${n.id}`); });
+  svg.querySelectorAll("[data-pbox]").forEach(g => { const t = g.querySelector("text"), b = box(g.dataset.pbox); if (t && t.getComputedTextLength() > b[2] - 4) errs.push(`pill-text ${g.dataset.pill}`); });   /* 和方框里的字一样，两边各留 2px */
+  return [...new Set(errs)];
+};
+
+/* ================= 条目 ================= */
+const KIND = { choice: ["chip-choice", "🗳️ 多选一"], multi: ["chip-multi", "☑️ 可多选"], confirm: ["chip-confirm", "✔️ 确认"], group: ["chip-group", "🧩 分组确认"], fill: ["chip-fill", "✍️ 填写"] };
+const WEIGHT = { heavy: ["chip-heavy", "🔎 需要细看"], light: ["chip-light", "⚡ 可快速确认"] };
+function wchip(it) { const w = WEIGHT[it.weight]; return w ? `<span class="chip ${w[0]}">${w[1]}</span>` : ""; }
+let FILTER = "all";
+function recOf(it) { return (it.opts || []).filter(o => o[3]).map(o => o[0]); }
+function renderItems() {
+  const box = document.getElementById("items"); let html = "", lastGroup = "";
+  const fm = adFocusMark();
+  ITEMS.forEach(it => {
+    const st = S(it.id);
+    const show = FILTER === "all" || (FILTER === "choice" && (it.kind === "choice" || it.kind === "multi")) || (FILTER === "mine" && isMine(it)) || (FILTER === "todo" && !st.status);
+    if (!show) return;
+    if (it.group !== lastGroup) { html += `<div class="group-title">${it.group}</div>`; lastGroup = it.group; }
+    const [kc, kn] = KIND[it.kind] || ["", it.kind];
+    /* v3.7：一张卡的数据写错时只画一张出错卡，不让整页空白（__lint() 会报出原因） */
+    try { html += it.kind === "group" ? groupCard(it, st, kc, kn) : adItemCard(it, st, kc, kn); }
+    catch (err) { html += `<article class="card" id="card-${esc(it.id)}"><div class="card-head"><span class="card-id">${esc(it.id)}</span><h3>${esc(String(it.title || ""))}</h3></div><p class="skipb">这张卡的数据形状有误，画不出来：${esc(String(err && err.message || err))}。请看 __lint() 的报错。</p></article>`; }
+  });
+  box.innerHTML = html || '<p class="from">这个筛选下没有条目。</p>';
+  box.querySelectorAll(".card").forEach(adLinkTerms);
+  box.querySelectorAll("textarea").forEach(autoGrow);
+  adLinkCodes(box); adRenderCodeIndex(); renderToc();
+  adFocusRestore(fm);
+}
+/* v3.7：每次作答都会重画条目区，焦点会丢；记下焦点在哪个控件上，重画后放回去（键盘用户不用从头 Tab） */
+function adFocusMark() {
+  const el = document.activeElement; if (!el || !el.closest || !el.closest("#items")) return null;
+  const card = el.closest(".card"), pt = el.closest(".pt");
+  return { id: el.id || "", card: card ? card.id : "", pt: pt ? pt.id : "", p: el.dataset.p || "", s: el.dataset.s || "", pk: el.dataset.pk || "", tag: el.tagName, cls: String(el.className || "") };
+}
+function adFocusRestore(m) {
+  if (!m) return; let el = m.id ? document.getElementById(m.id) : null;
+  const scope = (m.pt && document.getElementById(m.pt)) || (m.card && document.getElementById(m.card));
+  if (!el && scope) el = [...scope.querySelectorAll("button, input, textarea")].find(x => (m.p && x.dataset.p === m.p) || (m.s && x.dataset.s === m.s) || (m.pk && x.dataset.pk === m.pk))
+    || (m.tag === "TEXTAREA" ? scope.querySelector("textarea") : null) || (/nochoice/.test(m.cls) ? scope.querySelector(".nochoice") : null);
+  if (el && typeof el.focus === "function") el.focus({ preventScroll: true });
+}
+/* 确认 / 多选一 / 可多选 / 填写卡。有 brief（v3.7 简报四格）时：四格和图在前，plain、evidence、example、risk、fig、参考表、收起的图收进“核对材料”；没有 brief 时和 v3.6 一样 */
+function adItemCard(it, st, kc, kn) {
+  let opts = "";
+  if (it.opts) {
+    opts = `<div class="opts" role="${it.kind === "multi" ? "group" : "radiogroup"}" aria-label="${esc(it.title)}">` + it.opts.map(o => {
+      const sel = it.kind === "multi" ? st.multi.includes(o[0]) : st.choice === o[0];
+      const typ = it.kind === "multi" ? "checkbox" : "radio";
+      const ox = (it._ox || {})[o[0]], input = `<input type="${typ}" id="${it.id}-${o[0]}" name="${it.id}" ${sel ? "checked" : ""} onchange="pick('${it.id}','${o[0]}')">`;
+      const head = `<span><b>${o[0]} · ${o[1]}${o[3] ? '<span class="rec">我的推荐</span>' : ""}</b>${o[2] ? `<p>${o[2]}</p>` : ""}</span>`;
+      const extra = adOptExtra(it, o[0]), more = ox && ox.more ? foldBlock(`${it.id}|o:${o[0]}`, [["full", ox.more, "原文"]]) : "";
+      /* v3.7：好处、代价、选了之后、对别的卡的影响、退路和原文都放在可点的 label 外面：点这些字不会误选这个选项 */
+      return extra || more ? `<div class="opt optw ${sel ? "sel" : ""}"><label class="optl">${input}${head}</label>${extra}${more}</div>` : `<label class="opt ${sel ? "sel" : ""}">${input}${head}</label>`;
+    }).join("") + "</div>";
+  }
+  const body = it.brief
+    ? `${adFrame(it)}${adVisShown(it)}${adTrust(it)}${adDrawer(it)}`
+    : `<div class="plain">${linkSrc(it.plain)}</div>
+      ${it.evidence ? `<div class="evid"><b>依据</b>${linkSrc(it.evidence)}</div>` : ""}
+      ${extras(it)}
+      ${it.fig || ""}${adVisShown(it)}${adTrust(it)}${adExtraFolds(it)}`;
+  return `<article class="card ${st.status ? "s-" + st.status : ""}" id="card-${it.id}">
+      <div class="card-head"><span class="card-id">${it.id}</span><h3>${it.title}</h3><span class="chip ${kc}">${kn}</span>${wchip(it)}${(typeof it.mine === "boolean" ? it.mine : String(it.from || "").includes("我的建议")) ? '<span class="chip">✨ 含我的建议</span>' : ""}${adHeadChips(it)}${adViewBtn(it)}</div>
+      <div class="from">来源：${it.from}</div>
+      ${adSkipBanner(it)}
+      ${body}
+      ${opts}
+      ${it.kind === "fill" ? `<div class="fields">${it.fields.map(f => `<label>${f[1]}<input type="text" value="${esc((st.fields || {})[f[0]] || "")}" placeholder="${esc(f[2] || "")}" oninput="setField('${it.id}','${f[0]}',this.value)"></label>`).join("")}</div>` : ""}
+      ${it.kind === "choice" ? `<button class="btn nochoice ${st.status === "tweak" && !st.choice ? "btn-primary" : ""}" type="button" onclick="noneFits('${it.id}')">都不合适，我在评论里说</button>` : (it.kind === "fill" ? "" : `<div class="decide"><div class="sbtns">${[["ok", "✅ 通过"], ["tweak", "🤔 待微调"], ["bad", "❌ 需修改"]].map(([k, n]) => `<button class="sbtn ${st.status === k ? "on" : ""}" type="button" data-s="${k}" onclick="setStatus('${it.id}','${k}')">${n}</button>`).join("")}</div></div>`)}
+      ${st.how === "all" && st.status ? `<div class="how">· 全页一键通过${st.howRec ? "，选项按推荐方案填入" : ""}（不是逐条点的）</div>` : ""}
+      <textarea id="cm-${it.id}" placeholder="评论（可选）：补充事实、修改意见或例子" oninput="setComment('${it.id}',this.value)">${esc(st.comment)}</textarea>
+    </article>`;
+}
+/* ---- v3.3：通用补充块（举例 / 风险）；v3.7.1 起“在沙盘里看”不在这里，在卡头（adViewBtn） ---- */
+function extras(it) {
+  return foldBlock(`${it.id}|g`, [["ex", it.example, "举个例子"], ["risk", it.risk]]);
+}
+/* v3.7.1：“在沙盘里看”放在卡头，所有卡都一样（v3.7 有简报的卡把它排在四格、图和核对材料之后）；视角不存在时不画，__lint() 会提示 */
+function adViewName(v) {
+  if (v === "all") return "全景";
+  const i = String(v).indexOf(":"), k = String(v).slice(0, i), id = String(v).slice(i + 1);
+  if (k === "flow") { const f = AD_DATA.flows.find(x => x.id === id); return f ? `${f.id} ${adPlain(String(f.name || ""))}` : id; }
+  if (k === "obj") { const o = AD_DATA.obj[id]; return o ? adPlain(String(o.name || id)) : id; }
+  return String(v);
+}
+function adViewBtn(it) {
+  return typeof it.view === "string" && window.__views().includes(it.view) ? `<button class="btn viewbtn" type="button" title="跳到沙盘的「${esc(adViewName(it.view))}」视角" onclick="showView('${it.view}')">🗺️ 在沙盘里看全貌</button>` : "";
+}
+/* ---- v3.4：说明折叠。每类说明一个芯片，点开才显示；不同类型不同样式，避免每段看起来一样。
+   v3.7：多了几类（全文、依据、参考表、图、已定、完整说法）；芯片上写读完要几分钟（不到 1 分钟的不写） ---- */
+const MK = { ex: ["💡", "场景"], why: ["🧭", "理由"], risk: ["⚠️", "要注意"], ifno: ["↩️", "不同意的话"], text: ["📄", "原文与落点"],
+  full: ["📄", "全文"], evid: ["🔬", "依据"], fig: ["📋", "参考表"], tbl: ["📋", "参考表"], vis: ["📊", "图"], settled: ["📌", "已经定了的"], title: ["🗒", "完整说法"] };
+const OPEN = new Set(); let OPEN_ALL = false;
+let AD_MEASURE = false; /* 量字数时为 true：折叠一律按收起算，不画“你在别处选了什么”的提示 */
+function foldBlock(key, parts, lead) {
+  parts = parts.filter(x => x[1]); if (!parts.length) return "";
+  const isOn = pk => !AD_MEASURE && (OPEN_ALL || OPEN.has(pk));
+  const cost = html => { const m = adMin(adTok(html)); return m >= 0.75 ? ` · ${Math.max(1, Math.round(m))} 分钟` : ""; };
+  const chips = parts.map(([k, html, label, uid]) => { const pk = `${key}|${uid || k}`, on = isOn(pk); return `<button type="button" class="mchip k-${k}" aria-expanded="${on}" data-pk="${esc(pk)}" onclick="togglePan(this)">${MK[k][0]} ${label || MK[k][1]}${cost(html)}</button>`; }).join("");
+  const pans = parts.map(([k, html, label, uid]) => { const pk = `${key}|${uid || k}`, on = isOn(pk); return `<div class="pan k-${k}" data-pk="${esc(pk)}" ${on ? "" : "hidden"}><span class="ph">${MK[k][0]} ${label || MK[k][1]}</span>${html}</div>`; }).join("");
+  return `<div class="more">${lead ? `<b class="ml">${lead}</b>` : ""}${chips}</div><div class="panels">${pans}</div>`;
+}
+function togglePan(btn) {
+  const pk = btn.dataset.pk, on = btn.getAttribute("aria-expanded") !== "true";
+  btn.setAttribute("aria-expanded", on); on ? OPEN.add(pk) : OPEN.delete(pk);
+  const host = btn.closest(".more, .pact"), scope = host && host.nextElementSibling;
+  const pan = scope ? [...scope.children].find(x => x.dataset && x.dataset.pk === pk) : null; if (pan) pan.hidden = !on;
+}
+function toggleOpenAll() { OPEN_ALL = !OPEN_ALL; if (!OPEN_ALL) { OPEN.clear(); AD_ROUTE_OPEN = false; } renderFilters(); renderItems(); try { adRenderRoute(); } catch (err) { console.error(err); } }
+function showView(v) { setView(v); document.getElementById("sec-sandbox").scrollIntoView({ behavior: "smooth", block: "start" }); }
+function isMine(it) { if (typeof it.mine === "boolean") return it.mine; return String(it.from || "").includes("我的建议") || (it.points || []).some(p => p.src === "推断" || p.src === "建议"); }
+/* ---- v3.4：分组决定卡。每个点没有默认表态，必须自己点；"其余都同意"是显式的批量操作，会标出来 ---- */
+/* 点的来源标签：数据里的 SRCB_X 可以增改，例如 { "现行范式": ["cold", "现行范式"] }（样式取 inf / cold / 空） */
+const SRCB = Object.assign({ "推断": ["inf", "我的推断"], "建议": ["inf", "我的建议"], "冷读": ["cold", "冷读发现"], "你已定": ["", "你已定"] }, typeof SRCB_X !== "undefined" ? SRCB_X : {});
+const PV = [["yes", "✓ 同意"], ["adj", "✎ 要调整"], ["no", "✕ 不同意"]];
+const PVN = { yes: "同意", adj: "要调整", no: "不同意" };
+const HOW = { rest: "本组批量同意", all: "全页一键通过" };
+const NOTE = { yes: ["补充说明（可选）", "比如前提、例外或提醒，不写也可以"], adj: ["希望怎么调整", "写下你希望改成什么"], no: ["为什么不同意", "希望怎么定？"] };
+function ptState(st, pid) { st.points = st.points || {}; return st.points[pid] || (st.points[pid] = { v: null, c: "" }); }
+function ptDone(it, st) { return it.points.filter(p => ptState(st, p.id).v).length; }
+function groupStatus(it, st) { const vs = it.points.map(p => ptState(st, p.id).v); if (vs.includes(null) || vs.includes(undefined)) return null; return vs.includes("no") ? "bad" : vs.includes("adj") ? "tweak" : "ok"; }
+function groupCard(it, st, kc, kn) {
+  const diff = it.points.some(p => p.to);  /* v3.7 对照式的点：一组里有一点写了 to，整组按对照式画；多数点相同的来源和落点只在图例里说一次，不同的点上照常标出 */
+  const majSrc = diff ? adMajority(it.points, "src") : null;
+  let majTgt = diff ? adMajority(it.points, "target") : null; if (majTgt !== null && AD_TARGET_BASE.includes(majTgt)) majTgt = null;  /* 改基线这类高亮落点每点照常标红 */
+  const pts = it.points.map((p, i) => {
+    const ps = ptState(st, p.id), sb = SRCB[p.src] || ["", p.src || ""], v = ps.v;
+    const tags = `${(majSrc === null || p.src !== majSrc) && sb[1] ? `<span class="srcb ${sb[0]}">${sb[1]}</span>` : ""}${(majTgt === null || p.target !== majTgt) && p.target ? `<span class="tgt ${AD_TARGET_BASE.includes(p.target) ? "base" : ""}">${p.target}</span>` : ""}${adPtTags(p)}${v ? "" : '<span class="pt-wait">待你表态</span>'}`;
+    const head = p.to
+      ? `<div class="pt-head"><span class="pt-n">${i + 1}</span><div class="pt-t pt-line"><span class="parea">${p.area || ""}</span>${tags}</div></div>${adPtDiff(it, p)}`
+      : `<div class="pt-head"><span class="pt-n">${i + 1}</span><div class="pt-t"><div class="pt-title">${p.title}</div>
+        <div class="pt-tags">${tags}</div></div></div>`;
+    /* 对照式的点：说明合成一个“细节”折叠，放在表态按钮同一行；旧写法的点照旧每类说明一个芯片 */
+    const det = p.to ? adPtDetail(it, p) : null;
+    return `<div class="pt ${v ? "st-" + v : ""}" id="pt-${it.id}-${p.id}">
+      ${head}
+      ${det ? "" : foldBlock(`${it.id}|p:${p.id}`, [["ex", p.ex], ["why", p.why], ["risk", p.risk], ["ifno", p.ifNo], ["text", p.text]])}
+      <div class="pact"><div class="pchoice" role="radiogroup" aria-label="第 ${i + 1} 点">${PV.map(([k, n]) => `<button type="button" role="radio" aria-checked="${v === k}" data-p="${k}" class="${v === k ? "on" : ""}" onclick="setPt('${it.id}','${p.id}','${k}')">${n}</button>`).join("")}</div>${v && ps.how ? `<span class="how">· ${HOW[ps.how]}</span>` : ""}${det ? det.chip : ""}</div>${det ? det.pan : ""}
+      ${v ? `<label class="note"><span>${NOTE[v][0]}</span><textarea placeholder="${NOTE[v][1]}" oninput="setPtComment('${it.id}','${p.id}',this.value)">${esc(ps.c)}</textarea></label>` : ""}
+    </div>`;
+  }).join("");
+  const n = it.points.length, d = ptDone(it, st), left = n - d;
+  const body = it.brief
+    ? `${adFrame(it)}${adVisShown(it)}${adTrust(it)}${adDrawer(it)}`
+    : `<div class="plain">${linkSrc(it.context)}</div>
+    ${extras(it)}
+    ${it.settled && it.settled.length ? `<div class="settled"><b>已经定了的（只作背景，不需要表态）</b><ul>${it.settled.map(x => `<li>${x}</li>`).join("")}</ul></div>` : ""}${adVisShown(it)}${adTrust(it)}${adExtraFolds(it)}`;
+  const head = diff ? adGroupLegend(it, majSrc, majTgt) : `<div class="points-h">${String(AD_DATA.text["points-head"] || "需要你看的 {n} 点：每点点一下表态；说明默认收起，需要时点开").split("{n}").join(n)}</div>`;
+  const foot = left
+    ? (it.bulk === false ? `<span>本组已表态 <b>${d}/${n}</b></span><span class="how">这一组要逐点表态：没有“都同意”，页眉的一键通过也不填这一组</span>` : `<span>本组已表态 <b>${d}/${n}</b></span><button class="btn" type="button" onclick="agreeRest('${it.id}')">${d ? `其余 ${left} 点都同意` : `这 ${n} 点都同意`}</button>`)
+    : `<span class="done">✓ 本组 ${n} 点都已表态</span>`;
+  return `<article class="card ${st.status ? "s-" + st.status : ""}" id="card-${it.id}">
+    <div class="card-head"><span class="card-id">${it.id}</span><h3>${it.title}</h3><span class="chip ${kc}">${kn}</span>${wchip(it)}${adHeadChips(it)}${adViewBtn(it)}</div>
+    <div class="from">来源：${it.from}</div>
+    ${adSkipBanner(it)}
+    ${body}
+    <div class="points">${head}${pts}</div>
+    <div class="gfoot">${foot}</div>
+    <textarea id="cm-${it.id}" placeholder="对这一组的其他意见（可选）" oninput="setComment('${it.id}',this.value)">${esc(st.comment)}</textarea>
+  </article>`;
+}
+function setPt(id, pid, v) { const it = ITEMS.find(x => x.id === id), st = S(id), ps = ptState(st, pid); if (ps.v === v) { ps.v = null; ps.how = null; } else { ps.v = v; ps.how = null; } st.status = groupStatus(it, st); save(); renderItems(); }
+function setPtComment(id, pid, v) { ptState(S(id), pid).c = v; save(); }
+function agreeRest(id, how) { const it = ITEMS.find(x => x.id === id), st = S(id); it.points.forEach(p => { const ps = ptState(st, p.id); if (!ps.v) { ps.v = "yes"; ps.how = how || "rest"; } }); st.status = groupStatus(it, st); if (!how) { save(); renderItems(); } }
+/* ================= v3.7：低负担 =================
+   一张卡默认只给四格（① 你在决定什么 ② 我推荐 ③ 你会失去什么 ⚖ 实话 ④ 不同意会怎样）、最多两张图和选项；
+   原来的段落原样收进“核对材料”。图由数据画，不写 HTML、不写坐标；__lint() 查形状、字数、诚实和数字出处。字段见 README。 */
+const AD_CPM = 400;  /* 估读速度：每分钟 400 个字（一个中文字或一个英文单词、数字算一个） */
+/* 只认真正的标签（< 后面是字母、/ 或 !），所以“<10 分钟”这种字不会被当成标签吃掉 */
+const AD_TAG = /<\/?[A-Za-z!][^>]*>/g;
+const adPlain = h => String(h == null ? "" : h).replace(AD_TAG, "").replace(/&nbsp;/g, " ").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&amp;/g, "&");
+/* 字数：adTokText 数已经是纯文字的（如 textContent），adTok 数 HTML 字符串 */
+const adTokText = t => (String(t == null ? "" : t).match(/[\u3400-\u9fff\uf900-\ufaff]|[A-Za-z0-9]+(?:[.:][0-9]+)*/g) || []).length;
+const adTok = h => adTokText(adPlain(String(h == null ? "" : h).replace(AD_TAG, " ")));
+/* v3.7 新增的 md 行用它：换行和块标签变空格、去标签、还原实体、合并空白（v3.6 的行仍用 strip，保证逐字不变） */
+const adMd = h => adPlain(String(h == null ? "" : h).replace(/<br\s*\/?>/gi, " ").replace(/<\/(?:p|div|li|tr|td|th|small|span|h\d)>/gi, " ")).replace(/\s+/g, " ").trim();
+/* 字数上限都在这里：__lint() 用它，README 的表照它写；页面上 window.__limits 可以查 */
+const AD_LIMITS = {
+  brief: { ask: 40, rec: 60, cost: 60, ifno: 60, honest: 110, tag: 14, lose: 18 },
+  page: { label: 6, text: 80, rows: 6 },
+  trust: { item: 20, max: 5 }, changed: 40, table: { title: 30, short: 16 },
+  opt: { d: 50, short: 10, up: 40, cost: 40, then: 44, step: 20, steps: 4, fx: 20, undo: 44 },
+  pt: { area: 8, from: 32, to: 32, sub: 44, lose: 24, no: 32, label: 6, need: 14, goal: 10 },
+  vis: { title: 16, sub: 20, cap: 90, shown: 2, text: 340 },
+  versus: { rows: [1, 12], side: 10, label: 10, cell: 14, basis: 12, same: 90 },
+  tree: { q: 40, ref: 24, edge: 8, leaf: 18, note: 44, br: [2, 4], depth: 3 },
+  flow: { steps: [2, 7], step: 14, note: 24 },
+  seq: { lanes: [2, 5], lane: 8, msgs: [1, 10], msg: 22, note: 24 },
+  bars: { rows: [2, 6], label: 14, note: 16, unit: 4 },
+  layers: { rows: [1, 6], col: 10, label: 6, cell: 36, shared: 60 },
+  scale: { zones: [2, 5], label: 8, out: 16, note: 30, q: 40, ref: 24 },
+  budget: { item: [700, 480, 300], groupBase: [340, 280, 220], groupPer: [80, 70, 60] },
+  /* v3.7.1：NO_SANDBOX 的字数；没有沙盘的提示里，几张卡以上画了结构类的图（AD_STRUCT_VIS）时点名这些卡 */
+  sandbox: { reason: 60, structural: 2 },
+};
+window.__limits = AD_LIMITS;
+const AD_STRUCT_VIS = ["layers", "flow", "seq"];
+/* 预算里的“字”：中文字和全角标点算 1，英文字母、数字、半角标点和空格算 0.5 */
+const adLen = s => { let n = 0; for (const ch of adPlain(s)) n += /[⺀-鿿豈-﫿　-〿＀-￯]/.test(ch) ? 1 : 0.5; return Math.ceil(n); };
+const adMin = t => t / AD_CPM;
+const adMinLabel = m => m < 0.75 ? "不到 1 分钟" : `约 ${Math.max(1, Math.round(m))} 分钟`;
+const adSlot = v => v == null || v === "" ? null : (typeof v === "object" && !Array.isArray(v) ? v : { t: String(v) });
+/* 一句话的依据性质：前四种是事实（实线框），后四种是判断（虚线框） */
+const AD_BASIS = { "按文本数": 0, "实测": 0, "你已定": 0, "设计差异": 0, "我的判断": 1, "估计": 1, "预期": 1, "推断": 1 };
+const adBasis = b => b ? `<span class="basis ${AD_BASIS[b] ? "j" : ""}">${esc(b)}</span>` : "";
+const AD_SLOT = { ask: "① 你在决定什么", rec: "② 我推荐", cost: "③ 你会失去什么", ifno: "④ 不同意会怎样", honest: "⚖ 实话" };
+const AD_VISNAME = { versus: "逐条对照", tree: "判断树", flow: "步骤", seq: "时序", bars: "数量", layers: "两列对照", scale: "分界线" };
+
+function adFrame(it) {
+  const b = it.brief; if (!b) return "";
+  const cell = (k, cls) => {
+    const s = adSlot(b[k]); if (!s) return "";
+    const lose = k === "cost" && Array.isArray(b.lose) && b.lose.length ? `<div class="lchips">${b.lose.map(x => { const [t, ref] = Array.isArray(x) ? x : [x, ""]; return `<span class="lchip">${t}${ref ? ` · ${ref}` : ""}</span>`; }).join("")}</div>` : "";
+    const more = s.more ? foldBlock(`${it.id}|f|${k}`, [["full", linkSrc(s.more), "全文"]]) : "";
+    return `<div class="fs ${cls || ""}" data-slot="${k}"><span class="fl ${k === "cost" ? "cost" : ""}">${AD_SLOT[k]}</span><div class="ft">${linkSrc(s.t)}${adBasis(s.basis)}</div>${lose}${more}</div>`;
+  };
+  const rec = cell("rec"), cost = cell("cost");
+  const pair = rec && cost ? rec + cost : (rec || cost).replace('class="fs ', 'class="fs full ');
+  return `<div class="frame">${cell("ask", "full")}${pair}${cell("honest", "full hon")}${cell("ifno", "full")}</div>`;
+}
+function adOptShort(it, k) { const o = (it.opts || []).find(x => x[0] === k), ox = (it._ox || {})[k] || {}; const t = ox.short || (o && adLen(o[1]) <= 10 ? o[1] : ""); return t; }
+function adOptChip(it, k) { const t = adOptShort(it, k); return `<span class="okey">${esc(k)}${t ? " " + t : ""}</span>`; }
+const AD_VC = { A2: 0, A1: 0, "=": 1, "?": 1, B1: 2, B2: 2 };
+/* 逐条对照里，属于审批者自己定的那几条（bands 第三项写 "you"）的行；sides 是这一行里占优的一方（A / B） */
+function adYouRows(v) {
+  const out = [], rows = Array.isArray(v.rows) ? v.rows : []; let ri = 0;
+  (Array.isArray(v.bands) ? v.bands : []).forEach(bd => { const n = +(bd && bd[1]) || 0, you = bd && (bd[2] === "you" || bd[2] === true); for (let k = 0; k < n && ri < rows.length; k++, ri++) if (you && Array.isArray(rows[ri])) { const r = rows[ri]; out.push({ label: r[0], row: r, cells: r.slice(1).filter(Array.isArray), sides: new Set(r.slice(1).filter(Array.isArray).map(c => /^A/.test(c[0]) ? "A" : /^B/.test(c[0]) ? "B" : null).filter(Boolean)) }); } });
+  return out;
+}
+/* 按审批者自己的顺序，第一条有 A / B 结论的行（两边都有结论也算这一行，不往后找） */
+function adVsFirst(v) { return adYouRows(v).find(r => r.sides.size >= 1) || null; }
+/* 这张对照图比的是哪两个选项：写了 keys 用 keys；否则 sides 的第一个词正好是两个选项键就用它们；卡上正好两个选项就用这两个；都不行返回 null */
+function adVsKeys(it, v) {
+  const ok = (it.opts || []).map(o => o[0]);
+  if (Array.isArray(v.keys) && v.keys.length === 2) return v.keys;
+  if (Array.isArray(v.sides) && v.sides.length === 2) { const lead = v.sides.map(x => adPlain(x).trim().split(/\s+/)[0]); if (lead[0] !== lead[1] && lead.every(k => ok.includes(k))) return lead; }
+  return ok.length === 2 ? ok : null;
+}
+function adVsSides(it, v, keys) { if (Array.isArray(v.sides) && v.sides.length === 2) return v.sides; if (keys) return keys.map(k => `${k}${adOptShort(it, k) ? " " + adOptShort(it, k) : ""}`); return ["左边", "右边"]; }
+const AD_VSTR = { A2: "明显占优", A1: "略占优", B2: "明显占优", B1: "略占优" };
+const AD_VIS = {
+  versus(it, v) {
+    const keys = adVsKeys(it, v), sd = adVsSides(it, v, keys), rows = Array.isArray(v.rows) ? v.rows : [];
+    const CLS = { A2: "a2", A1: "a1", "=": "eq", "?": "unk", B1: "b1", B2: "b2" };
+    const SIDE = { A2: `${sd[0]} 明显占优`, A1: `${sd[0]} 略占优`, "=": "相同", "?": "待试点", B1: `${sd[1]} 略占优`, B2: `${sd[1]} 明显占优` };
+    let h = `<div class="vs"><span class="vh"></span><span class="vh a">${sd[0]} 占优</span><span class="vh">相同 · 待定</span><span class="vh b">${sd[1]} 占优</span>`;
+    const bands = Array.isArray(v.bands) ? v.bands : []; let bi = -1, left = 0;
+    rows.forEach(r => {
+      if (!Array.isArray(r)) return;
+      while (bands.length && left <= 0 && bi < bands.length - 1) { bi++; left = +(bands[bi] && bands[bi][1]) || 0; h += `<div class="vband">${bands[bi] ? bands[bi][0] : ""}</div>`; }
+      left--;
+      const slots = [[], [], []]; r.slice(1).forEach(c => { if (Array.isArray(c) && AD_VC[c[0]] !== undefined) slots[AD_VC[c[0]]].push(c); });
+      /* .vside 在宽屏上看不见但还在文字里（读屏和冷读材料能读到哪一边、多明显），手机上直接显示 */
+      h += `<span class="vl">${r[0]}${r.includes("≡") ? "<i>≡</i>" : ""}</span>` + slots.map(sl => `<span class="vc">${sl.map(c => `<span class="vp ${CLS[c[0]]}"><span class="vside">${SIDE[c[0]]}：</span>${c[1] || SIDE[c[0]]}${c[2] ? `<small>${c[2]}</small>` : ""}</span>`).join("")}</span>`).join("");
+    });
+    h += `</div><div class="vs-key"><span>粗体实底 = 明显占优</span><span>细框 = 略占优</span><span>虚线 = 不知道，要试点</span><span>没有打分，也没有权重</span></div>`;
+    if (v.same) h += `<div class="vis-cap"><b>≡</b> ${v.same}</div>`;
+    /* 只算“第一条有结论的是哪条、哪边占优”这一句，不列胜负清单（清单会丢掉“略”“部分”“推断”这些限定） */
+    const first = adVsFirst(v);
+    if (first) {
+      const desc = c => `${SIDE[c[0]]}${c[1] ? `（${c[1]}）` : ""}`;
+      const ab = first.cells.filter(c => /^[AB]/.test(c[0]));
+      h += `<div class="vs-sum">按你定的顺序，第一条有结论的是「${first.label}」：${first.sides.size === 1 ? ab.map(desc).join("，") : `两边各有占优——${ab.map(desc).join("；")}`}${first.cells.some(c => c[0] === "?") ? "；另有一部分要试点才知道" : ""}。</div>`;
+    } else if (adYouRows(v).length) h += `<div class="vs-sum">按你定的顺序，你定的几条都没有分出高下。</div>`;
+    return h;
+  },
+  tree(it, v) {
+    const leaf = n => n.opt ? `<div class="tleaf">${adOptChip(it, n.opt)}${n.note ? `<span class="tnote">${n.note}</span>` : ""}</div>` : `<div class="tleaf"><span class="tact">${n.t || ""}</span>${n.note ? `<span class="tnote">${n.note}</span>` : ""}</div>`;
+    const node = n => `<span class="tq">${n.q}${n.ref ? `<small>${n.ref}</small>` : ""}</span><ul>${(n.br || []).map(([e, c]) => c && c.q ? `<li><div class="tbr"><span class="te">${e}</span></div>${node(c)}</li>` : `<li><div class="tbr"><span class="te">${e}</span>${leaf(c || {})}</div></li>`).join("")}</ul>`;
+    return v.root && v.root.q ? `<ul class="tree"><li>${node(v.root)}</li></ul>` : "";
+  },
+  flow(it, v) { return `<div class="flw">${(v.steps || []).map((s, i) => { const [t, note] = Array.isArray(s) ? s : [s, ""]; return `${i ? '<span class="farr" aria-hidden="true">→</span>' : ""}<div class="fstep">${t}${note ? `<small>${note}</small>` : ""}</div>`; }).join("")}</div>`; },
+  seq(it, v) {
+    const L = Array.isArray(v.lanes) ? v.lanes : [], n = L.length, ix = x => typeof x === "number" ? x : L.indexOf(x), nm = x => typeof x === "number" ? L[x] : x;
+    const lifes = L.map((_, i) => `<span class="sq-life" style="grid-column:${i + 1}"></span>`).join("");
+    let h = `<div class="seq" style="--n:${n}"><div class="sq-row">${L.map((l, i) => `<div class="sq-lane" style="grid-column:${i + 1}">${l}</div>`).join("")}</div>`;
+    (Array.isArray(v.msgs) ? v.msgs : []).forEach((m, k) => {
+      const a = ix(m[0]), b = ix(m[1]); const txt = `<span><span class="sq-n">${k + 1}</span>${m[2] || ""}${m[3] ? `<small>${m[3]}</small>` : ""}</span>`;
+      if (a === b) h += `<div class="sq-row">${lifes}<div class="sq-self" style="grid-column:${a + 1}">${txt}</div></div>`;
+      else { const lo = Math.min(a, b), hi = Math.max(a, b); h += `<div class="sq-row">${lifes}<div class="sq-msg ${b > a ? "r" : "l"}" style="grid-column:${lo + 1} / ${hi + 2};--span:${hi - lo + 1}">${txt}</div></div>`; }
+    });
+    /* 手机上角色一多，每栏只剩几十像素：换成编号清单（同一份内容，class alt 不计字数） */
+    return h + `</div><ol class="seq-list alt">${(Array.isArray(v.msgs) ? v.msgs : []).map(m => `<li><b>${nm(m[0])} → ${nm(m[1])}</b>：${m[2] || ""}${m[3] ? `（${m[3]}）` : ""}</li>`).join("")}</ol>`;
+  },
+  bars(it, v) {
+    const max = Math.max(1, ...(v.rows || []).map(r => +r[1] || 0));
+    return `<div class="bars">${(v.rows || []).map(r => `<span class="bl">${r[0]}</span><span class="bt" style="width:${Math.max(1, (+r[1] || 0) / max * 100).toFixed(1)}%"></span><span class="bv">${esc(String(r[1]))}${v.unit ? " " + v.unit : ""}${r[2] ? ` <small>${r[2]}</small>` : ""}</span>`).join("")}</div>`;
+  },
+  layers(it, v) {
+    const [ca, cb] = v.cols || ["A", "B"];
+    let h = `<div class="lay"><span class="lh l0"></span><span class="lh a">${ca}</span><span class="lh b">${cb}</span>`;
+    (v.rows || []).forEach(r => { h += `<span class="ll">${r[0]}</span>` + (r[1] === "=" || r[2] === "=" ? `<div class="lc sh"><small>两边相同</small>${r[1] === "=" ? r[2] : r[1]}</div>` : `<div class="lc a">${r[1]}</div><div class="lc b">${r[2]}</div>`); });
+    return h + "</div>";
+  },
+  scale(it, v) {
+    const isKey = k => (it.opts || []).some(o => o[0] === k);
+    return `${v.q ? `<div class="scl-q">${v.q}${v.ref ? `<small>${v.ref}</small>` : ""}</div>` : ""}<div class="scl">${(v.zones || []).map(z => `<div class="sz" style="flex:${+z[1] || 1} 1 0"><b>${z[0]}</b>${isKey(z[2]) ? adOptChip(it, z[2]) : `<span class="tact">${z[2] || ""}</span>`}${z[3] ? `<span class="tnote">${z[3]}</span>` : ""}</div>`).join("")}</div>`;
+  },
+};
+function adVis(it, v) {
+  const R = v && AD_VIS[v.type]; if (!R) return "";
+  const head = v.title || v.sub ? `<div class="vis-h">${v.title || ""}${v.sub ? `<small>${v.sub}</small>` : ""}</div>` : "";
+  return `<div class="vis" data-vis="${esc(v.type)}">${head}${R(it, v)}${v.cap ? `<div class="vis-cap">${linkSrc(v.cap)}</div>` : ""}</div>`;
+}
+function adVisShown(it) { return (Array.isArray(it.vis) ? it.vis : []).filter(v => v && !v.fold).map(v => adVis(it, v)).join(""); }
+function adTable(t) {
+  const cols = t.cols || [];
+  return `<table class="rtbl"><thead><tr>${cols.map(c => `<th>${c}</th>`).join("")}</tr></thead><tbody>${(t.rows || []).map(r => `<tr>${(r || []).map((c, i) => `<td data-h="${esc(adPlain(cols[i] || ""))}">${c}</td>`).join("")}</tr>`).join("")}</tbody></table>${t.note ? `<p class="rtbl-note">${t.note}</p>` : ""}`;
+}
+function adTrust(it) { return Array.isArray(it.trust) && it.trust.length ? `<div class="trust"><b>依据可靠度</b>${it.trust.map(x => `<span>${x}</span>`).join("")}</div>` : ""; }
+/* 收起来的图和参考表（两种卡都用）；有 brief 的卡还把段落收进来 */
+function adFoldParts(it) {
+  const parts = [], clip = (t, n) => { let o = ""; for (const ch of adPlain(t)) { if (adLen(o + ch) > n - 1) return o + "…"; o += ch; } return o; };
+  (Array.isArray(it.vis) ? it.vis : []).forEach((v, i) => { if (v && v.fold) parts.push(["vis", adVis(it, Object.assign({}, v, { title: "" })), v.title || AD_VISNAME[v.type] || "图", "v" + i]); });
+  /* 参考表的芯片：写了 short 用 short，否则取整个标题截到 16 字（“参考表二”这种编号单独看不出是什么） */
+  (Array.isArray(it.tables) ? it.tables : []).forEach((t, i) => { const ti = t.title || "参考表", sh = t.short || clip(ti, AD_LIMITS.table.short); parts.push(["tbl", (sh !== ti ? `<b>${ti}</b>` : "") + adTable(t), sh, "t" + i]); });
+  return parts;
+}
+function adExtraFolds(it) { const p = adFoldParts(it); return p.length ? foldBlock(`${it.id}|x`, p) : ""; }
+function adDrawer(it) {
+  const parts = [];
+  if (it.kind === "group") { if (it.context) parts.push(["full", linkSrc(it.context), "背景全文"]); }
+  else if (it.plain) parts.push(["full", linkSrc(it.plain), "全文"]);
+  if (it.evidence) parts.push(["evid", linkSrc(it.evidence), "依据"]);
+  if (it.example) parts.push(["ex", it.example, "举个例子"]);
+  if (it.risk) parts.push(["risk", it.risk]);
+  if (it.kind === "group" && it.settled && it.settled.length) parts.push(["settled", `<ul>${it.settled.map(x => `<li>${x}</li>`).join("")}</ul>`, `已经定了的 ${it.settled.length} 条`]);
+  if (it.fig) parts.push(["fig", it.fig, "参考表和图"]);
+  return foldBlock(`${it.id}|d`, parts.concat(adFoldParts(it)), "核对材料");
+}
+function adOptExtra(it, k) {
+  const o = (it._ox || {})[k]; if (!o) return "";
+  const then = o.then ? (Array.isArray(o.then) ? o.then.join(" → ") : o.then) : "";
+  const rows = (o.up ? `<span class="up"><b>好处</b>${o.up}</span>` : "") + (o.cost ? `<span class="cost"><b>代价</b>${o.cost}</span>` : "") + (then ? `<span><b>选了之后</b>${then}</span>` : "") + (o.undo ? `<span><b>选错了怎么退</b>${o.undo}</span>` : "");
+  const fx = Array.isArray(o.fx) && o.fx.length ? `<span class="ofx">${o.fx.filter(Array.isArray).map(f => `<span class="tag lnk">${f[0]} ${f[1]}</span>`).join("")}</span>` : "";
+  return rows || fx ? `<div class="ox">${rows}${fx}</div>` : "";
+}
+/* 选项对别的卡的影响（fx）反过来查：哪张卡会因为别处的哪个选择而变（审批路线和卡上的提示用；只提示，不替你作答） */
+const AD_IN = {};
+ITEMS.forEach(src => Object.entries(src._ox || {}).forEach(([k, o]) => (Array.isArray(o.fx) ? o.fx : []).forEach(f => { if (Array.isArray(f)) (AD_IN[f[0]] = AD_IN[f[0]] || []).push({ src: src.id, k, t: f[1] }); })));
+function adChosen(id, k) { const st = ST.items[id], src = ITEMS.find(x => x.id === id); if (!st || !src) return false; return src.kind === "multi" ? (st.multi || []).includes(k) : st.choice === k; }
+function adSkipBanner(it) { if (AD_MEASURE) return ""; return (AD_IN[it.id] || []).filter(x => adChosen(x.src, x.k)).map(x => `<div class="skipb">↪ 你在 ${x.src} 选了 ${x.k}：${x.t}</div>`).join(""); }
+function adHeadChips(it) {
+  const L = AD_LOAD[it.id], n = it.kind === "group" ? (it.points || []).length : 1;
+  let h = L ? `<span class="chip rtime">⏱ 读${adMinLabel(L.min)}${n > 1 ? ` · ${n} 处表态` : ""}${L.allMin - L.min >= 0.75 ? `，全部展开${adMinLabel(L.allMin)}` : ""}</span>` : "";
+  (Array.isArray(it.needs) ? it.needs : []).forEach(id => { h += `<span class="chip lnk">⛓ 前提 ${id}</span>`; });
+  if (it.kind === "group" && it.bulk === false) h += '<span class="chip nob">🚫 逐点表态</span>';
+  if (it.changed) h += `<span class="chip chg">🆕 ${it.changed}</span>`;
+  return h;
+}
+function adPtTags(p) {
+  let h = "";
+  (Array.isArray(p.goal) ? p.goal : (p.goal ? [p.goal] : [])).forEach(g => { h += `<span class="pgoal">让出：${g}</span>`; });
+  if (p.unsure) h += '<span class="punsure">我最没把握</span>';
+  (Array.isArray(p.needs) ? p.needs : []).forEach(nd => {
+    const [cid, pid, name] = nd, c = ITEMS.find(x => x.id === cid), idx = c && c.points ? c.points.findIndex(q => q.id === pid) : -1;
+    const st = ST.items[cid], v = !AD_MEASURE && st && st.points && st.points[pid] ? st.points[pid].v : null;
+    const where = `${cid} 第 ${idx + 1} 点${name ? `（${name}）` : ""}`;
+    h += v === "no" ? `<span class="pneed broken">✕ 前提 ${where}：你不同意它</span>` : `<span class="pneed">⛓ 前提 ${where}</span>`;
+  });
+  return h;
+}
+function adPtDiff(it, p) {
+  const lab = Array.isArray(p.labels) && p.labels.length === 2 ? p.labels : ["现在", "改成"];
+  return `<div class="pdiff"><div class="pd"><small>${lab[0]}</small>${p.from || "—"}</div><span class="parr" aria-hidden="true">→</span><div class="pd to"><small>${lab[1]}</small>${p.to}</div></div>${p.sub ? `<div class="psub">${p.sub}</div>` : ""}${p.lose ? `<div class="plose"><b>同意会失去</b>${p.lose}</div>` : ""}${p.no ? `<div class="pno"><b>不同意就</b>${p.no}</div>` : ""}`;
+}
+/* 一组点里占多数（至少六成）的来源 / 落点；没有多数时返回 null，每点照常标 */
+function adMajority(pts, k) {
+  const c = {}; pts.forEach(p => { const v = p[k] || ""; if (v) c[v] = (c[v] || 0) + 1; });
+  const [v, n] = Object.entries(c).sort((a, b) => b[1] - a[1])[0] || ["", 0];
+  return v && n >= Math.max(2, Math.ceil(pts.length * 0.6)) ? v : null;
+}
+/* 对照式的点的“细节”：完整说法、理由、要注意、场景、不同意的话、原文与落点合在一个折叠里；有“要注意”时芯片上写出来 */
+function adPtDetail(it, p) {
+  const secs = [["title", p.title, "完整说法"], ["why", p.why], ["risk", p.risk], ["ex", p.ex], ["ifno", p.ifNo], ["text", p.text]].filter(x => x[1]);
+  if (!secs.length) return { chip: "", pan: "" };
+  const pk = `${it.id}|p:${p.id}|d`, on = !AD_MEASURE && (OPEN_ALL || OPEN.has(pk));
+  const html = secs.map(([k, h, label]) => `<div class="pan k-${k}"><span class="ph">${MK[k][0]} ${label || MK[k][1]}</span>${h}</div>`).join("");
+  const m = adMin(adTok(html));
+  /* 有“要注意”时芯片用琥珀色（和旧写法的 ⚠️ 芯片一样显眼） */
+  return { chip: `<button type="button" class="mchip ${p.risk ? "k-risk" : "k-full"} pdet" aria-expanded="${on}" data-pk="${esc(pk)}" onclick="togglePan(this)">📄 细节${p.risk ? "（含 ⚠️ 要注意）" : ""}${m >= 0.75 ? ` · ${Math.max(1, Math.round(m))} 分钟` : ""}</button>`,
+    pan: `<div class="panels"><div class="pan k-detail" data-pk="${esc(pk)}" ${on ? "" : "hidden"}>${html}</div></div>` };
+}
+function adGroupLegend(it, majSrc, majTgt) {
+  const pts = it.points, n = pts.length, nums = f => pts.map((p, i) => f(p) ? i + 1 : 0).filter(Boolean);
+  const ex = nums(p => p.no || p.labels);
+  /* 按格子的名字说，不说左右：手机上两格是上下排的 */
+  let s = `${n} 点：「现在」格是现在的做法，「改成」格是我建议的；不同意就保留「现在」${ex.length ? `（第 ${ex.join("、")} 点不一样，点上写了）` : ""}。`;
+  const differs = (k, v) => nums(p => p[k] && p[k] !== v);   /* 只算点上真的标出来的 */
+  const bits = [majSrc !== null ? `「${(SRCB[majSrc] || ["", majSrc])[1]}」` : "", majTgt !== null ? `落点「${majTgt}」` : ""].filter(Boolean);
+  const exc = [...new Set([...(majSrc !== null ? differs("src", majSrc) : []), ...(majTgt !== null ? differs("target", majTgt) : [])])].sort((a, b) => a - b);
+  if (bits.length) s += `${exc.length ? `除第 ${exc.join("、")} 点外，` : ""}都是${bits.join("、")}${exc.length ? "（不同的点上标了）" : ""}。`;
+  return `<div class="glegend">${s}</div>${adLossMap(it)}`;
+}
+function adLossMap(it) {
+  const pts = it.points, gs = p => (Array.isArray(p.goal) ? p.goal : (p.goal ? [p.goal] : []));
+  if (pts.filter(p => gs(p).length).length < 2) return "";
+  let order = AD_GOALS ? AD_GOALS.map(g => Array.isArray(g) ? g[0] : g) : [];
+  pts.forEach(p => gs(p).forEach(g => { if (!order.includes(g)) order.push(g); }));
+  order = order.filter(g => pts.some(p => gs(p).includes(g)));
+  /* 没标目标的点画空心虚线：原文没说它让出哪个目标，不等于不让出 */
+  let h = `<div class="lmap" style="--n:${pts.length}" aria-hidden="true"><span></span>${pts.map((p, i) => `<span class="lh ${p.unsure ? "u" : ""} ${gs(p).length ? "" : "q"}">${i + 1}</span>`).join("")}`;
+  order.forEach(g => { h += `<span class="lg">${g}</span>${pts.map(p => `<span class="ld ${gs(p).includes(g) ? "on" : (gs(p).length ? "" : "q")}"></span>`).join("")}`; });
+  const list = order.map(g => `${g}：第 ${pts.map((p, i) => gs(p).includes(g) ? i + 1 : 0).filter(Boolean).join("、")} 点`).join("；");
+  const none = pts.map((p, i) => gs(p).length ? 0 : i + 1).filter(Boolean), uns = pts.map((p, i) => p.unsure ? i + 1 : 0).filter(Boolean);
+  /* 和别的图一样装在 .vis 框里：标题说清楚这是什么，下面一行是同一份内容的文字版（读屏、冷读、手机都靠它），字数按图里的字算 */
+  return `<div class="vis" data-vis="lmap"><div class="vis-h">同意会让出你的哪个目标<small>${AD_GOALS ? "行按你定的目标顺序，" : ""}列是第几点</small></div>${h}</div><div class="lmap-k vis-cap">${list}${none.length ? `；没标目标：第 ${none.join("、")} 点（原文没说它让出哪个目标，不等于不让出）` : ""}${uns.length ? `；我最没把握：第 ${uns.join("、")} 点（编号带虚线圈）` : ""}。</div></div>`;
+}
+/* ---- 字数：每张卡默认看到多少字、展开后多少字（用空白回答量，和当前作答无关） ---- */
+const AD_LOAD = {};
+function adBudget(it) {
+  const w = it.weight === "heavy" ? 0 : it.weight === "light" ? 2 : 1, B = AD_LIMITS.budget;
+  return it.kind === "group" ? B.groupBase[w] + B.groupPer[w] * (it.points || []).length : B.item[w];
+}
+function adMeasure(it) {
+  const blank = { status: null, choice: null, multi: [], comment: "", points: {} };
+  AD_MEASURE = true; let html = "";
+  try { const [kc, kn] = KIND[it.kind] || ["", ""]; html = it.kind === "group" ? groupCard(it, blank, kc, kn) : adItemCard(it, blank, kc, kn); }
+  catch (err) { return { prose: 0, vis: 0, visTok: [], all: 0, budget: adBudget(it), min: 0, allMin: 0, error: String(err && err.message || err) }; }
+  finally { AD_MEASURE = false; }
+  const box = document.createElement("div"); box.innerHTML = html;
+  /* 不算的：按钮、输入框、卡头芯片、固定的格名（① 你在决定什么、现在 / 改成、核对材料……）、手机上才用的另一种排法（.alt、.vside） */
+  box.querySelectorAll("button,textarea,input,select,.chip,.rec,.pt-wait,.how,.ph,.fl,.pd > small,.ml,.plose > b,.pno > b,.vs-key,.vs .vh,.lay .lh,.vside,.alt,script,style").forEach(x => x.remove());
+  const all = adTokText(box.textContent);
+  box.querySelectorAll("[hidden]").forEach(x => x.remove());
+  box.querySelectorAll("details:not([open])").forEach(d => [...d.children].forEach(c => { if (c.tagName !== "SUMMARY") c.remove(); }));
+  const visTok = [...box.querySelectorAll(".vis")].map(x => adTokText(x.textContent));
+  const vis = visTok.reduce((a, x) => a + x, 0), prose = adTokText(box.textContent) - vis;
+  return { prose, vis, visTok, all, budget: adBudget(it), min: adMin(prose + 0.5 * vis), allMin: adMin(all) };
+}
+function adMeasureAll() { ITEMS.forEach(it => { AD_LOAD[it.id] = adMeasure(it); }); }
+window.__load = () => ITEMS.map(it => Object.assign({ id: it.id }, AD_LOAD[it.id]));
+
+/* ---- 审批路线：每张卡一行（要定什么、推荐、实话、前提、几分钟、状态），只读，点一行跳到卡片 ---- */
+const AD_CN = ["零", "一", "二", "三", "四", "五", "六", "七", "八", "九"];
+function adKindLabel(it) {
+  if (it.kind === "choice") { const n = (it.opts || []).length; return n > 1 && n < 10 ? `${AD_CN[n]}选一` : "多选一"; }
+  if (it.kind === "multi") return `可多选（${(it.opts || []).length} 项）`;
+  if (it.kind === "group") return `${(it.points || []).length} 点逐点表态`;
+  if (it.kind === "fill") return `填 ${(it.fields || []).length} 栏`;
+  return "确认";
+}
+function adHonHead(t) { const s = adPlain(t).replace(/\s+/g, " ").trim(); const i = s.search(/[；。]/); let h = i > 0 ? s.slice(0, i) : s; if (adLen(h) > 40) { let out = ""; for (const ch of h) { if (adLen(out + ch) > 38) break; out += ch; } h = out + "…"; } return h; }
+/* 路线上的推荐：brief.tag；没有时取推荐的选项；再没有时取 ② 我推荐 的第一小句（到“：；。”为止，最多 16 字） */
+function adRecHead(it) {
+  if (it.brief && it.brief.tag) return it.brief.tag;
+  const r = recOf(it); if (r.length) return `我推荐 ${r.join("、")}`;
+  const s = it.brief ? adSlot(it.brief.rec) : null;
+  if (s && typeof s.t === "string") { const t = adPlain(s.t).trim(), i = t.search(/[：；。]/); let h = i > 0 ? t.slice(0, i) : t; if (adLen(h) > 16) { let o = ""; for (const ch of h) { if (adLen(o + ch) > 15) break; o += ch; } h = o + "…"; } return "我推荐：" + h; }
+  return it.kind === "fill" ? "只有你知道" : "";
+}
+/* v3.7.1：路线默认显示的行数；其余的收起来（展开状态在每次重画时保留） */
+const AD_ROUTE_SHOW = 8; let AD_ROUTE_OPEN = false;
+function adRenderRoute() {
+  const el = document.getElementById("route"); if (!el) return;
+  if (AD_OPT.ROUTE === false || ITEMS.length < 2) { el.hidden = true; return; }
+  let asks = 0, mins = 0, all = 0;
+  const rows = ITEMS.map(it => {   /* v3.7.1：留成数组，前 AD_ROUTE_SHOW 行默认显示 */
+    const st = S(it.id), s = st.status, L = AD_LOAD[it.id] || { min: 0, allMin: 0 };
+    const part = !s && it.kind === "group" && ptDone(it, st) > 0;
+    asks += it.kind === "group" ? (it.points || []).length : 1; mins += L.min; all += L.allMin;
+    const tags = [`<span class="tag">${adKindLabel(it)}</span>`];
+    if (it.weight === "heavy") tags.push('<span class="tag hot">需要细看</span>'); else if (it.weight === "light") tags.push('<span class="tag">可快速确认</span>');
+    (Array.isArray(it.needs) ? it.needs : []).forEach(id => tags.push(`<span class="tag lnk">前提 ${id}</span>`));
+    (AD_IN[it.id] || []).forEach(x => tags.push(`<span class="tag lnk">${x.src} 选 ${x.k}：${x.t}</span>`));
+    if (it.kind === "group" && it.bulk === false) tags.push('<span class="tag nob">逐点表态，不能一键通过</span>');
+    const rec = adRecHead(it);
+    const hs = it.brief ? adSlot(it.brief.honest) : null;
+    const stx = s ? SNAME[s] : (part ? `已表态 ${ptDone(it, st)}/${it.points.length}` : "待表态");
+    return `<div class="rt"><span class="dot ${s || (part ? "part" : "")}"></span><div class="rt-t"><a href="#card-${it.id}" onclick="event.preventDefault();jumpToItem('${it.id}')"><span class="rid">${it.id}</span>${it.title}</a><div class="tags">${tags.join("")}</div></div><div class="rt-rec">${rec}${hs && typeof hs.t === "string" ? `<span class="hon">⚖ ${esc(adHonHead(hs.t))}</span>` : ""}</div><div class="rt-m"><b>${stx}</b>读${adMinLabel(L.min)}</div></div>`;
+  });
+  const done = ITEMS.filter(it => S(it.id).status).length, light = ITEMS.find(it => it.weight === "light" && !S(it.id).status && !(AD_IN[it.id] || []).some(x => !S(x.src).status));
+  /* v3.7.1：路线在条目一节的开头，所以“下一个待表态”放在标题行（从导航点进来就能看到）；超过 AD_ROUTE_SHOW 张卡时其余的收起，展开状态在重画时保留，“展开全部说明”也会展开它 */
+  const btns = `${done < ITEMS.length ? `<button class="btn" type="button" onclick="nextTodo()">→ 下一个待表态</button>` : ""}${light ? `<button class="btn" type="button" onclick="jumpToItem('${light.id}')">⚡ 先做可快速确认的</button>` : ""}`;
+  const shown = rows.slice(0, AD_ROUTE_SHOW).join(""), rest = rows.slice(AD_ROUTE_SHOW);
+  el.innerHTML = `<div class="route-h"><h3>${AD_DATA.text["route-title"] || "审批路线"}</h3><span>${ITEMS.length} 张卡 · ${asks} 处表态 · 默认版面读${adMinLabel(mins)}${all - mins >= 1 ? `（全部展开${adMinLabel(all)}）` : ""} · 已表态 ${done}/${ITEMS.length}</span>${btns ? `<div class="route-b">${btns}</div>` : ""}</div>${shown}${rest.length ? `<details class="route-more"${AD_ROUTE_OPEN || OPEN_ALL ? " open" : ""} ontoggle="AD_ROUTE_OPEN = this.open"><summary>其余 ${rest.length} 张卡</summary>${rest.join("")}</details>` : ""}`;
+  el.hidden = false; adLinkCodes(el);
+}
+
+/* ---- 反馈 md：只有用了 v3.7 字段的条目才多出这些行；没用的条目和 v3.6 逐字相同 ---- */
+function adVisMD(it, v) {
+  const S2 = adMd;
+  if (v.type === "versus") { const keys = adVsKeys(it, v), sd = adVsSides(it, v, keys), N = { A2: `${sd[0]} 明显占优`, A1: `${sd[0]} 略占优`, "=": "相同", "?": "待试点", B1: `${sd[1]} 略占优`, B2: `${sd[1]} 明显占优` };
+    const bands = Array.isArray(v.bands) ? v.bands : [], starts = {}; let at = 0; bands.forEach(b => { starts[at] = S2(b && b[0]); at += +(b && b[1]) || 0; });
+    const rows = (Array.isArray(v.rows) ? v.rows : []).filter(Array.isArray).map((r, i) => `${starts[i] !== undefined ? `〔${starts[i]}〕` : ""}${S2(r[0])}：${r.slice(1).filter(Array.isArray).map(c => `${N[c[0]] || c[0]}${c[1] ? `（${S2(c[1])}${c[2] ? "，" + S2(c[2]) : ""}）` : ""}`).join("；")}${r.includes("≡") ? "〔≡〕" : ""}`).join("｜");
+    const first = adVsFirst(v);
+    return rows + (v.same ? `｜≡ ${S2(v.same)}` : "") + (first ? `｜按你定的顺序，第一条有结论的是「${S2(first.label)}」` : ""); }
+  if (v.type === "tree") { const leaf = n => n.opt ? `${n.opt}${adOptShort(it, n.opt) ? " " + adOptShort(it, n.opt) : ""}${n.note ? `（${S2(n.note)}）` : ""}` : `${S2(n.t)}${n.note ? `（${S2(n.note)}）` : ""}`;
+    const node = n => `${S2(n.q)}${n.ref ? `（${S2(n.ref)}）` : ""} ${(Array.isArray(n.br) ? n.br : []).filter(Array.isArray).map(([e, c]) => `${S2(e)} → ${c && c.q ? `〔${node(c)}〕` : leaf(c || {})}`).join("；")}`;
+    return v.root && v.root.q ? node(v.root) : ""; }
+  if (v.type === "flow") return (Array.isArray(v.steps) ? v.steps : []).map(x => Array.isArray(x) ? `${S2(x[0])}${x[1] ? `（${S2(x[1])}）` : ""}` : S2(x)).join(" → ");
+  if (v.type === "seq") { const L = Array.isArray(v.lanes) ? v.lanes : [], nm = x => S2(typeof x === "number" ? L[x] : x); return (Array.isArray(v.msgs) ? v.msgs : []).filter(Array.isArray).map((m, i) => `${i + 1}. ${nm(m[0])} → ${nm(m[1])}：${S2(m[2])}${m[3] ? `（${S2(m[3])}）` : ""}`).join("；"); }
+  if (v.type === "bars") return (Array.isArray(v.rows) ? v.rows : []).filter(Array.isArray).map(r => `${S2(r[0])} ${r[1]}${v.unit ? " " + S2(v.unit) : ""}${r[2] ? `（${S2(r[2])}）` : ""}`).join("；");
+  if (v.type === "layers") { const [ca, cb] = Array.isArray(v.cols) ? v.cols : ["左边", "右边"]; return (Array.isArray(v.rows) ? v.rows : []).filter(Array.isArray).map(r => r[1] === "=" || r[2] === "=" ? `${S2(r[0])}：两边相同：${S2(r[1] === "=" ? r[2] : r[1])}` : `${S2(r[0])}：${S2(ca)} ${S2(r[1])}｜${S2(cb)} ${S2(r[2])}`).join("；"); }
+  if (v.type === "scale") return `${v.q ? `${S2(v.q)}${v.ref ? `（${S2(v.ref)}）` : ""}：` : ""}${(Array.isArray(v.zones) ? v.zones : []).filter(Array.isArray).map(z => `${S2(z[0])} → ${S2(z[2])}${z[3] ? `（${S2(z[3])}）` : ""}`).join("；")}`;
+  return "";
+}
+function adMDHead(it) {
+  let md = "";
+  if (it.changed) md += `- 上轮之后改了：${adMd(it.changed)}\n`;
+  if (Array.isArray(it.needs) && it.needs.length) md += `- 前提：${it.needs.join("、")}\n`;
+  const b = it.brief;
+  if (b && typeof b === "object") {
+    md += `- 简报：\n`;
+    [["ask", "你在决定"], ["rec", "我推荐"], ["cost", "你会失去"], ["honest", "实话"], ["ifno", "不同意会怎样"]].forEach(([k, n]) => {
+      const x = adSlot(b[k]); if (!x) return;
+      let line = `  - ${n}：${adMd(x.t)}${x.basis ? `（${adMd(x.basis)}）` : ""}`;
+      if (k === "cost" && Array.isArray(b.lose) && b.lose.length) line += `；失去的：${b.lose.map(y => Array.isArray(y) ? `${adMd(y[0])}${y[1] ? `（${adMd(y[1])}）` : ""}` : adMd(y)).join("；")}`;
+      if (x.more) line += `；全文：${adMd(x.more)}`;
+      md += line + "\n";
+    });
+  }
+  if (Array.isArray(it.trust) && it.trust.length) md += `- 依据可靠度：${it.trust.map(adMd).join("；")}\n`;
+  const vis = Array.isArray(it.vis) ? it.vis.filter(v => v && typeof v === "object") : [];
+  if (vis.length) { md += `- 图：\n`; vis.forEach(v => { md += `  - ${adMd(v.title || AD_VISNAME[v.type] || String(v.type))}${v.sub ? `（${adMd(v.sub)}）` : ""}（${AD_VISNAME[v.type] || v.type}）：${adVisMD(it, v)}${v.cap ? `（说明：${adMd(v.cap)}）` : ""}\n`; }); }
+  return md;
+}
+/* 有 brief 的卡：举例、要注意也写进 md（审批者在核对材料里看得到的，下一轮也要看得到）；没有 brief 的卡不加，和 v3.6 一样 */
+function adMDMore(it) {
+  if (!it.brief) return "";
+  return (it.kind !== "group" && it.example ? `- 举例：${adMd(it.example)}\n` : "") + (it.risk ? `- 要注意：${adMd(it.risk)}\n` : "");
+}
+function adMDTables(it) {
+  return (Array.isArray(it.tables) ? it.tables : []).filter(t => t && typeof t === "object").map(t => { const c = x => adMd(x).replace(/\|/g, "／");
+    return `- 参考表「${c(t.title || "参考表")}」：\n\n  | ${(Array.isArray(t.cols) ? t.cols : []).map(c).join(" | ")} |\n  |${(Array.isArray(t.cols) ? t.cols : []).map(() => "---").join("|")}|\n${(Array.isArray(t.rows) ? t.rows : []).map(r => `  | ${(Array.isArray(r) ? r : [r]).map(c).join(" | ")} |\n`).join("")}${t.note ? `\n  注：${c(t.note)}\n` : ""}`; }).join("");
+}
+function adMDOpts(it) {
+  if (!it._ox) return "";
+  return (it.opts || []).map(o => { const x = it._ox[o[0]]; if (!x) return ""; const p = [];
+    if (x.up) p.push(`好处 ${adMd(x.up)}`); if (x.cost) p.push(`代价 ${adMd(x.cost)}`);
+    if (x.then) p.push(`选了之后 ${Array.isArray(x.then) ? x.then.map(adMd).join(" → ") : adMd(x.then)}`);
+    if (Array.isArray(x.fx) && x.fx.length) p.push(`影响 ${x.fx.filter(Array.isArray).map(f => `${f[0]} ${adMd(f[1])}`).join("、")}`);
+    if (x.undo) p.push(`选错了怎么退 ${adMd(x.undo)}`); if (x.more) p.push(`原文 ${adMd(x.more)}`);
+    return p.length ? `  - ${o[0]} ${o[1]}：${p.join("；")}\n` : ""; }).join("");
+}
+/* 对照式的点在 md 里补上：不同意时是什么（no / labels）、我最没把握、前提被你否掉了。旧写法的点不加 */
+function adMDPoint(it, p) {
+  let x = "";
+  if (p.unsure) x += "〔我最没把握〕";
+  if (p.no) x += `（不同意＝${adMd(p.no)}）`; else if (Array.isArray(p.labels) && p.labels.length === 2 && p.to) x += `（${adMd(p.labels[0])}：${adMd(p.from)}；${adMd(p.labels[1])}：${adMd(p.to)}）`;
+  (Array.isArray(p.needs) ? p.needs : []).forEach(nd => { if (!Array.isArray(nd)) return; const st = ST.items[nd[0]]; if (st && st.points && st.points[nd[1]] && st.points[nd[1]].v === "no") x += `（前提 ${nd[0]} 的 ${nd[1]} 点${nd[2] ? `「${adMd(nd[2])}」` : ""}你不同意）`; });
+  return x;
+}
+/* ---- 自检：__lint() 返回 {errors, warnings, budget, mode, load}。
+   errors：形状、诚实、数字出处的问题，一律不通过；warnings：可能片面的写法，只提示；
+   budget：字数超了（上限都在 AD_LIMITS），cfg 的 BUDGET 为 "warn" 时只提示（只用于重建 v3.7 之前的旧轮次） ---- */
+function adLintVis(it, v, i, X) {
+  const { e, w, len } = X, at = `第 ${i + 1} 张图`, keys = (it.opts || []).map(o => o[0]), LM = AD_LIMITS;
+  if (!v || typeof v !== "object" || !AD_VIS[v.type]) { e(`${at}的 type 只能是：${Object.keys(AD_VIS).join("、")}`); return; }
+  const nm = `${at}（${AD_VISNAME[v.type]}）`;
+  len(`${nm}的标题`, v.title, LM.vis.title); len(`${nm}的副标题（sub）`, v.sub, LM.vis.sub); len(`${nm}的说明（cap）`, v.cap, LM.vis.cap);
+  const arr = (a, [lo, hi], what) => { if (!Array.isArray(a) || a.length < lo || a.length > hi) { e(`${nm}的 ${what} 要有 ${lo}–${hi} 项`); return false; } return true; };
+  if (v.type === "versus") {
+    const V = LM.versus;
+    if (v.sides !== undefined) { if (!(Array.isArray(v.sides) && v.sides.length === 2)) e(`${nm}的 sides 要是两个名字，如 ["A 现行", "B 新做法"]`); else v.sides.forEach(x => len(`${nm}的一方（sides）`, x, V.side)); }
+    if (v.keys !== undefined && !(Array.isArray(v.keys) && v.keys.length === 2 && v.keys[0] !== v.keys[1] && v.keys.every(k => keys.includes(k)))) e(`${nm}的 keys 要是本卡两个不同的选项键，如 ["A", "B"]`);
+    else if (keys.length && !adVsKeys(it, v)) e(`${nm}比的是哪两个选项认不出来（本卡有 ${keys.length} 个选项）：写 keys: ["A", "B"]（左边、右边各是哪个选项），或让 sides 的第一个词是选项键`);
+    else if (!keys.length && !Array.isArray(v.sides)) e(`${nm}所在的卡没有选项，要写 sides（左右两边的名字）`);
+    if (!arr(v.rows, V.rows, "rows")) return;
+    let same = false;
+    v.rows.forEach((r, j) => {
+      const rn = `${nm}第 ${j + 1} 行`;
+      if (!Array.isArray(r) || !r.length) { e(`${rn}要是 [标准, [结论, 说明, 依据], …]`); return; }
+      if (r[0] == null || r[0] === "") e(`${rn}没写标准`); else len(`${rn}的标准`, r[0], V.label);
+      const seen = [0, 0, 0]; if (r.includes("≡")) same = true;
+      r.slice(1).forEach(c => { if (c === "≡") return; if (!Array.isArray(c) || AD_VC[c[0]] === undefined) { e(`${rn}的结论只能是 A2 / A1 / = / ? / B1 / B2`); return; } if (++seen[AD_VC[c[0]]] > 1) e(`${rn}同一栏里有两个结论`); len(`${rn}的说明`, c[1], V.cell); len(`${rn}的依据`, c[2], V.basis); });
+    });
+    if (same && !v.same) e(`${nm}有标 ≡ 的行，要在 same 里说明这几行量的是同一件事，别当成几项优势`); len(`${nm}的 same`, v.same, V.same);
+    if (v.bands === undefined) w(`${nm}没有 bands：算不出“按你定的顺序，第一条有结论的是哪条”，诚实检查也跳过了`);
+    else if (!Array.isArray(v.bands)) e(`${nm}的 bands 要是 [[名字, 行数, "you"], …]`);
+    else {
+      let sum = 0;
+      v.bands.forEach((b, j) => { if (!Array.isArray(b) || !(Number.isInteger(+b[1]) && +b[1] > 0)) { e(`${nm}的 bands 第 ${j + 1} 项要是 [名字, 行数, "you"]`); return; } sum += +b[1];
+        if (!(b[2] === undefined || b[2] === "you" || b[2] === true)) e(`${nm}的 bands 第 ${j + 1} 项第三个值只能不写、"you" 或 true（表示这几行是你自己定的标准）`); });
+      if (sum !== v.rows.length) e(`${nm}的 bands 行数加起来是 ${sum}，rows 有 ${v.rows.length} 行`);
+      if (!v.bands.some(b => Array.isArray(b) && (b[2] === "you" || b[2] === true))) w(`${nm}的 bands 没有一段标 "you"：算不出“按你定的顺序，第一条有结论的是哪条”，诚实检查也跳过了`);
+    }
+  } else if (v.type === "tree") {
+    const T = LM.tree;
+    const walk = (n, d, path) => {
+      if (!n || typeof n !== "object") { e(`${nm}的${path}是空的`); return; }
+      if (n.q !== undefined) {
+        if (d > T.depth) e(`${nm}超过 ${T.depth} 层`); len(`${nm}的问题`, n.q, T.q); len(`${nm}的问题出处（ref）`, n.ref, T.ref);
+        if (!Array.isArray(n.br) || n.br.length < T.br[0] || n.br.length > T.br[1]) e(`${nm}的“${adPlain(n.q).slice(0, 12)}”要有 ${T.br[0]}–${T.br[1]} 个分支`);
+        else n.br.forEach(b => { if (!Array.isArray(b)) { e(`${nm}的分支要是 [条件, 下一步]`); return; } len(`${nm}的分支条件`, b[0], T.edge); walk(b[1], d + 1, `“${adPlain(b[0])}”分支`); });
+      } else if (n.opt !== undefined) {
+        if (!keys.length) e(`${nm}的叶子写了 opt: ${n.opt}，可本卡没有选项；没有选项时叶子写 t（要做的事）`); else if (!keys.includes(n.opt)) e(`${nm}的叶子 ${n.opt} 不是本卡的选项`);
+        len(`${nm}的叶子说明`, n.note, T.note);
+      } else if (n.t !== undefined) { len(`${nm}的叶子`, n.t, T.leaf); len(`${nm}的叶子说明`, n.note, T.note); }
+      else e(`${nm}的${path}要有 q（问题）、opt（选项）或 t（动作）`);
+    };
+    walk(v.root, 1, "根");
+  } else if (v.type === "flow") {
+    const F = LM.flow;
+    if (arr(v.steps, F.steps, "steps")) v.steps.forEach((x, j) => { const [t, note] = Array.isArray(x) ? x : [x, ""]; len(`${nm}第 ${j + 1} 步`, t, F.step); len(`${nm}第 ${j + 1} 步的说明`, note, F.note); });
+  } else if (v.type === "seq") {
+    const Q = LM.seq;
+    if (!arr(v.lanes, Q.lanes, "lanes")) return; v.lanes.forEach(l => len(`${nm}的角色`, l, Q.lane));
+    if (arr(v.msgs, Q.msgs, "msgs")) v.msgs.forEach((m, j) => { const ok = x => (Number.isInteger(x) && x >= 0 && x < v.lanes.length) || (typeof x === "string" && v.lanes.includes(x));
+      if (!Array.isArray(m) || !ok(m[0]) || !ok(m[1])) e(`${nm}第 ${j + 1} 条消息的发出方或接收方不在 lanes 里`); else { len(`${nm}第 ${j + 1} 条消息`, m[2], Q.msg); len(`${nm}第 ${j + 1} 条消息的说明`, m[3], Q.note); } });
+  } else if (v.type === "bars") {
+    const R = LM.bars;
+    if (arr(v.rows, R.rows, "rows")) v.rows.forEach((r, j) => { if (!Array.isArray(r) || typeof r[1] !== "number" || !isFinite(r[1]) || r[1] < 0) e(`${nm}第 ${j + 1} 行要是 [名字, 不小于 0 的数, 说明]`); else { len(`${nm}第 ${j + 1} 行的名字`, r[0], R.label); len(`${nm}第 ${j + 1} 行的说明`, r[2], R.note); } });
+    if (!v.cap) e(`${nm}是数量图，要在 cap 里写清楚怎么数的、前提是什么（只给数不给前提，最容易误导）`);
+    len(`${nm}的单位`, v.unit, R.unit);
+  } else if (v.type === "layers") {
+    const Y = LM.layers;
+    if (v.cols !== undefined && !(Array.isArray(v.cols) && v.cols.length === 2)) e(`${nm}的 cols 要是两个名字`); else (v.cols || []).forEach(c => len(`${nm}的列名`, c, Y.col));
+    if (arr(v.rows, Y.rows, "rows")) v.rows.forEach((r, j) => { if (!Array.isArray(r) || r.length !== 3) { e(`${nm}第 ${j + 1} 行要是 [层, 左边, 右边]，两边相同时一边写 "="`); return; } len(`${nm}第 ${j + 1} 行的层`, r[0], Y.label); if (r[1] === "=" || r[2] === "=") len(`${nm}第 ${j + 1} 行（两边相同）`, r[1] === "=" ? r[2] : r[1], Y.shared); else { len(`${nm}第 ${j + 1} 行左边`, r[1], Y.cell); len(`${nm}第 ${j + 1} 行右边`, r[2], Y.cell); } });
+  } else if (v.type === "scale") {
+    const Z = LM.scale;
+    if (arr(v.zones, Z.zones, "zones")) {
+      let sum = 0;
+      v.zones.forEach((z, j) => { if (!Array.isArray(z) || !(+z[1] > 0)) { e(`${nm}第 ${j + 1} 段要是 [名字, 宽度（百分比）, 结果, 说明]`); return; } sum += +z[1]; len(`${nm}第 ${j + 1} 段的名字`, z[0], Z.label);
+        if (!keys.includes(z[2])) { if (typeof z[2] === "string" && /^[A-Z][0-9]?$/.test(z[2].trim())) e(`${nm}第 ${j + 1} 段的结果 ${z[2]} 像是选项键，可本卡没有这个选项`); else len(`${nm}第 ${j + 1} 段的结果`, z[2], Z.out); }
+        len(`${nm}第 ${j + 1} 段的说明`, z[3], Z.note); });
+      if (Math.abs(sum - 100) > 1) e(`${nm}各段宽度加起来是 ${sum}，要是 100`);
+    }
+    len(`${nm}的问题`, v.q, Z.q); len(`${nm}的问题出处（ref）`, v.ref, Z.ref);
+  }
+  if (v.fold !== undefined && typeof v.fold !== "boolean") e(`${at}的 fold 只能是 true 或 false`);
+}
+/* 诚实：每张逐条对照都查。按审批者定的顺序，第一条有 A / B 结论的行里，只要有一格偏向没推荐的选项（两边各有占优也算），就要写 ⚖ 实话 */
+function adLintHonest(it, X) {
+  const rec = recOf(it); if (!rec.length) return;
+  (Array.isArray(it.vis) ? it.vis : []).forEach((v, i) => {
+    if (!v || v.type !== "versus") return;
+    const keys = adVsKeys(it, v), first = keys ? adVsFirst(v) : null; if (!first) return;
+    const off = [...first.sides].map(x => keys[x === "A" ? 0 : 1]).filter(k => !rec.includes(k));
+    if (off.length && !(it.brief && adSlot(it.brief.honest))) X.e(`第 ${i + 1} 张图（逐条对照）：按你定的顺序，第一条有结论的是「${adPlain(first.label)}」，${off.join("、")} 在这一条上占优${first.sides.size > 1 ? "（两边各有占优也算）" : ""}；推荐的却是 ${rec.join("、")}。要在 brief.honest（⚖ 实话）里直说，并在 ④ 不同意会怎样或判断树里给出走向 ${off.join("、")} 的路`);
+  });
+}
+/* 数字出处：默认看到的那一层（简报、图、选项的说明和补充、对照式的点）里两位以上的数，都要在本卡收起来的原文里找得到。
+   先做 NFKC（全角数字变半角）、去掉千分位逗号、去掉代号（R03-05、DEC-5、v3.6 这类带数字的标识），再按数值比 */
+function adNumText(h) {
+  return adPlain(h).normalize("NFKC").replace(/(\d),(?=\d{3}(?!\d))/g, "$1").replace(/[A-Za-z_][A-Za-z0-9_]*(?:[-./][A-Za-z0-9_]+)*/g, m => /\d/.test(m) ? " " : m);
+}
+function adNums(h, min) { return (adNumText(h).match(min === 1 ? /(?<![0-9.])\d+(?:\.\d+)?(?![0-9])/g : /(?<![0-9.])\d{2,}(?:\.\d+)?(?![0-9])/g) || []); }
+function adLintDrift(it, X) {
+  const b = it.brief && typeof it.brief === "object" ? it.brief : {}, shown = [];
+  const strs = (o, out, skip) => { if (typeof o === "string") out.push(o); else if (Array.isArray(o)) o.forEach(x => strs(x, out, skip)); else if (o && typeof o === "object") Object.entries(o).forEach(([k, x]) => { if (!(skip || []).includes(k)) strs(x, out, skip); }); return out; };
+  ["ask", "rec", "cost", "ifno", "honest"].forEach(k => { const x = adSlot(b[k]); if (x && typeof x.t === "string") shown.push(x.t); });
+  if (typeof b.tag === "string") shown.push(b.tag);
+  (Array.isArray(b.lose) ? b.lose : []).forEach(x => shown.push(Array.isArray(x) ? x[0] : x));   /* 第二项是出处（如“R03-05 第 6 点”），不算 */
+  (Array.isArray(it.trust) ? it.trust : []).forEach(x => shown.push(x));
+  (Array.isArray(it.vis) ? it.vis : []).forEach(v => {
+    if (!v || typeof v !== "object" || v.fold) return;   /* 收起来的图不在默认那一层 */
+    strs(v, shown, ["type", "keys", "fold", "ref", "zones", "rows", "bands", "opt"]);
+    if (Array.isArray(v.rows)) v.rows.forEach(r => { if (!Array.isArray(r)) return; if (v.type === "bars") { strs([r[0], r[2]], shown); if (typeof r[1] === "number") shown.push(String(r[1])); } else strs(r, shown); });
+    if (v.type === "scale" && Array.isArray(v.zones)) v.zones.forEach(z => Array.isArray(z) && strs([z[0], z[2], z[3]], shown));
+    if (v.type === "tree") { const walk = n => { if (!n || typeof n !== "object") return; strs([n.q, n.t, n.note], shown); (Array.isArray(n.br) ? n.br : []).forEach(x => { if (Array.isArray(x)) { strs(x[0], shown); walk(x[1]); } }); }; walk(v.root); }
+  });
+  Object.values(it._ox || {}).forEach(o => strs([o.d, o.short, o.up, o.cost, o.then, o.undo, Array.isArray(o.fx) ? o.fx.map(f => Array.isArray(f) ? f[1] : "") : ""], shown));
+  const diff = (it.points || []).some(p => p.to !== undefined || p.from !== undefined);
+  (it.points || []).forEach(p => strs([p.area, p.from, p.to, p.sub, p.lose, p.no, p.labels, p.goal], shown));
+  const nums = [...new Set(shown.flatMap(x => adNums(x)))];
+  if (!nums.length) return;
+  const src = [it.plain, it.context, it.evidence, it.example, it.risk, it.fig, ...(Array.isArray(it.settled) ? it.settled : []),
+    ...(Array.isArray(it.tables) ? it.tables : []).map(t => strs(t, []).join(" ")),
+    ...(it.points || []).flatMap(p => [diff ? p.title : "", p.why, p.risk, p.ex, p.ifNo, p.text]),
+    ...(it.opts || []).flatMap(o => (it._ox || {})[o[0]] ? [o[1], it._ox[o[0]].more] : [o[1], o[2]]),
+    ...["ask", "rec", "cost", "ifno", "honest"].map(k => (adSlot(b[k]) || {}).more)].filter(x => typeof x === "string" && x);
+  if (!src.length) { X.e(`默认看到的那一层里有数字（${nums.join("、")}），可本卡没有收起来的原文可以对照（plain、context、evidence、参考表、点的说明、选项原文都没写）。摘要和图只能用原文里有的数`); return; }
+  const have = new Set(src.flatMap(x => adNums(x, 1)).map(Number));
+  nums.forEach(n => { if (!have.has(Number(n))) X.e(`简报、图或选项里的数字 ${n} 在本卡收起来的原文里找不到（plain、context、evidence、参考表、点的说明、选项原文）。摘要和图只能用原文里有的数，先在原文里写清它怎么来的`); });
+}
+const AD_OPT_KEYS = ["k", "t", "rec", "short", "d", "up", "cost", "then", "fx", "undo", "more"];
+const AD_CODE_HEAD = /^[A-Z][A-Za-z0-9]*-\d/;
+function adLintItem(it, X, ids) {
+  const { e, w, len, fmt } = X, LM = AD_LIMITS, b = it.brief;
+  if (b !== undefined) {
+    if (!b || typeof b !== "object" || Array.isArray(b)) e("brief 要是对象 {ask, rec, cost, ifno, honest, lose, tag}");
+    else {
+      Object.keys(b).forEach(k => { if (!["ask", "rec", "cost", "ifno", "honest", "lose", "tag"].includes(k)) e(`brief 里不认识的字段 ${k}`); });
+      if (!adSlot(b.ask)) e("brief 要写 ask（① 你在决定什么）");
+      if (adSlot(b.rec) && !adSlot(b.cost)) e("brief 写了 rec（② 我推荐）就要写 cost（③ 你会失去什么），两格并排、一样大");
+      ["ask", "rec", "cost", "ifno", "honest"].forEach(k => {
+        const x = adSlot(b[k]); if (!x) return;
+        if (typeof b[k] === "object") Object.keys(b[k]).forEach(f => { if (!["t", "basis", "more"].includes(f)) e(`brief.${k} 里不认识的字段 ${f}（只认 t、basis、more）`); });
+        if (typeof x.t !== "string" || !x.t) { e(`brief.${k} 要是字符串或 {t, basis, more}，t 不能空`); return; }
+        len(AD_SLOT[k], x.t, LM.brief[k]); fmt(`${AD_SLOT[k]}的全文（more）`, x.more);
+        if (x.basis !== undefined && !(x.basis in AD_BASIS)) e(`brief.${k} 的 basis “${x.basis}”不认识，只能用：${Object.keys(AD_BASIS).join("、")}`);
+      });
+      len("brief.tag（路线上的推荐）", b.tag, LM.brief.tag);
+      if (b.lose !== undefined) {
+        if (!Array.isArray(b.lose)) e("brief.lose 要是数组：[\"失去的东西\", …] 或 [[\"失去的东西\", \"出处\"], …]");
+        else {
+          if (b.lose.length && !adSlot(b.cost)) e("brief 写了 lose 就要写 cost：失去的几项画在 ③ 你会失去什么 那一格里，没有 cost 就不显示");
+          b.lose.forEach(x => { const t = Array.isArray(x) ? x[0] : x; len("③ 里失去的一项", t, LM.brief.lose); if (Array.isArray(x)) fmt("③ 里失去的一项的出处", x[1]);
+            if (typeof x === "string" && AD_CODE_HEAD.test(adPlain(x).trim()) || (typeof x === "string" && ids.has(adPlain(x).trim().split(/\s+/)[0]))) e(`brief.lose 里的“${adPlain(x)}”以代号开头，像是上一项的出处：带出处的写成 [["失去的东西", "出处"]]（数组套数组）`); });
+        }
+      }
+    }
+  }
+  if (it.vis !== undefined) { if (!Array.isArray(it.vis)) e("vis 要是数组"); else { const shown = it.vis.filter(v => v && !v.fold).length; if (shown > LM.vis.shown) e(`直接显示的图有 ${shown} 张，最多 ${LM.vis.shown} 张；其余写 fold: true 收进核对材料`); it.vis.forEach((v, i) => adLintVis(it, v, i, X)); } }
+  if (it.tables !== undefined) {
+    if (!Array.isArray(it.tables)) e("tables 要是数组");
+    else it.tables.forEach((t, i) => { const tn = `tables 第 ${i + 1} 张`;
+      if (!t || !Array.isArray(t.cols) || !Array.isArray(t.rows)) { e(`${tn}要有 cols 和 rows`); return; }
+      len(`${tn}的标题`, t.title, LM.table.title); len(`${tn}的短名（short）`, t.short, LM.table.short); fmt(`${tn}的注（note）`, t.note); t.cols.forEach(c => fmt(`${tn}的表头`, c));
+      t.rows.forEach((r, j) => { if (!Array.isArray(r) || r.length !== t.cols.length) { e(`${tn}第 ${j + 1} 行有 ${Array.isArray(r) ? r.length : 0} 格，表头有 ${t.cols.length} 列`); return; } r.forEach((c, k) => fmt(`${tn}第 ${j + 1} 行第 ${k + 1} 格`, c)); }); });
+  }
+  if (it.trust !== undefined) { if (!Array.isArray(it.trust)) e("trust 要是数组"); else { if (it.trust.length > LM.trust.max) e(`trust 最多 ${LM.trust.max} 项`); it.trust.forEach(x => len("依据可靠度的一项", x, LM.trust.item)); } }
+  len("changed（上轮之后改了）", it.changed, LM.changed);
+  if (it.needs !== undefined) { if (!Array.isArray(it.needs)) e("needs 要是本页卡片编号的数组"); else it.needs.forEach(n => { if (!ids.has(n) || n === it.id) e(`needs 里的 ${n} 不是本页的另一张卡`); }); }
+  if (it.bulk !== undefined && typeof it.bulk !== "boolean") e("bulk 只能是 true 或 false");
+  if (it.bulk === false && it.kind !== "group") e("bulk: false 只用在分组卡上");
+  /* 选项：键必填、不能空、不能重复；对象写法的 t 必填 */
+  if (Array.isArray(it.opts)) {
+    const seen = new Set();
+    it.opts.forEach((o, j) => { if (!Array.isArray(o)) { e(`第 ${j + 1} 个选项要是 [键, 名字, 说明, 推荐] 或 {k, t, …}`); return; } const k = String(o[0] == null ? "" : o[0]).trim();
+      if (!k || k === "undefined" || k === "null") e(`第 ${j + 1} 个选项没有键（k）`); else if (seen.has(k)) e(`选项键 ${k} 重复了`); seen.add(k); });
+  }
+  Object.entries(it._ox || {}).forEach(([k, o]) => {
+    Object.keys(o).forEach(f => { if (!AD_OPT_KEYS.includes(f)) e(`选项 ${k} 里不认识的字段 ${f}（只认 ${AD_OPT_KEYS.join("、")}）`); });
+    if (typeof o.t !== "string" || !o.t.trim()) e(`选项 ${k} 要写 t（选项的名字）`); else fmt(`选项 ${k} 的名字`, o.t);
+    len(`选项 ${k} 的说明（d）`, o.d, LM.opt.d); len(`选项 ${k} 的简称（short）`, o.short, LM.opt.short); fmt(`选项 ${k} 的原文（more）`, o.more);
+    if (!!o.up !== !!o.cost) e(`选项 ${k}：好处（up）和代价（cost）要么都写，要么都不写`);
+    len(`选项 ${k} 的好处`, o.up, LM.opt.up); len(`选项 ${k} 的代价`, o.cost, LM.opt.cost); len(`选项 ${k} 的退路（undo）`, o.undo, LM.opt.undo);
+    if (o.then !== undefined) { if (Array.isArray(o.then)) { if (o.then.length > LM.opt.steps) e(`选项 ${k} 的 then 最多 ${LM.opt.steps} 步`); o.then.forEach(x => len(`选项 ${k} 选了之后的一步`, x, LM.opt.step)); } else len(`选项 ${k} 的选了之后（then）`, o.then, LM.opt.then); }
+    if (o.fx !== undefined) { if (!Array.isArray(o.fx)) e(`选项 ${k} 的 fx 要是 [[卡片编号, 影响], …]`); else o.fx.forEach(f => { if (!Array.isArray(f) || f.length < 2) { e(`选项 ${k} 的 fx 每项是 [卡片编号, 影响]`); return; } if (!ids.has(f[0]) && !CODES[f[0]]) e(`选项 ${k} 的 fx 指向的 ${f[0]} 既不是本页的卡，也不在代号表里`); len(`选项 ${k} 对 ${f[0]} 的影响`, f[1], LM.opt.fx); }); }
+  });
+  /* 只有推荐的选项写了“选了之后 / 选错了怎么退”：读起来像只有推荐的选项想清楚了（只提示） */
+  if (it._ox) { const rec = recOf(it), others = (it.opts || []).map(o => o[0]).filter(k => !rec.includes(k));
+    [["then", "选了之后"], ["undo", "选错了怎么退"]].forEach(([f, n]) => { if (others.length && rec.some(k => it._ox[k] && it._ox[k][f]) && !others.some(k => it._ox[k] && it._ox[k][f])) w(`只有推荐的选项写了“${n}”（${f}），别的选项没写：读起来像只有推荐的选项想清楚了`); }); }
+  /* 分组：对照式和旧写法不混用；对照式每点都写来源（图例只说一次多数来源） */
+  const P = it.points || [], isDiff = p => p && (p.to !== undefined || p.from !== undefined), nd = P.filter(isDiff).length;
+  if (nd && nd < P.length) e(`对照式的点（写了 from / to）和旧写法的点混在一组里（${nd}/${P.length} 点是对照式）：同一组要么都写对照式，要么都不写`);
+  P.forEach((p, j) => {
+    const pn = `第 ${j + 1} 点`; if (!p || typeof p !== "object") { e(`${pn}要是对象`); return; }
+    if (isDiff(p)) {
+      if (!p.to) e(`${pn} 写了 from 就要写 to（改成什么）`);
+      if (!p.area) e(`${pn} 是对照式（from → to），要写 area（这一点管什么，如“存放位置”）`);
+      if (!p.title) e(`${pn} 仍要写 title（完整说法，折叠里看、反馈 md 里用）`);
+      if (!p.src) e(`${pn} 是对照式，要写 src（来源）：图例只说一次多数点的来源，没写的点会被当成多数`);
+      len(`${pn} 的 area`, p.area, LM.pt.area); len(`${pn} 的现在（from）`, p.from, LM.pt.from); len(`${pn} 的改成（to）`, p.to, LM.pt.to); len(`${pn} 的补充（sub）`, p.sub, LM.pt.sub); len(`${pn} 的同意会失去（lose）`, p.lose, LM.pt.lose); len(`${pn} 的不同意就（no）`, p.no, LM.pt.no);
+      if (p.labels !== undefined && !(Array.isArray(p.labels) && p.labels.length === 2)) e(`${pn} 的 labels 要是两个词，如 ["不同意就用", "同意就定为"]`); else (p.labels || []).forEach(x => len(`${pn} 的 labels`, x, LM.pt.label));
+    }
+    if (p.needs !== undefined) { if (!Array.isArray(p.needs)) e(`${pn} 的 needs 要是 [[卡片编号, 点的 id, 名字], …]`); else p.needs.forEach(q2 => { const c = Array.isArray(q2) && ITEMS.find(x => x.id === q2[0]); if (!c || !c.points || !c.points.some(x => x.id === q2[1])) e(`${pn} 的前提 ${Array.isArray(q2) ? q2.slice(0, 2).join(" / ") : q2} 找不到`); else len(`${pn} 前提的名字`, q2[2], LM.pt.need); }); }
+    (Array.isArray(p.goal) ? p.goal : (p.goal ? [p.goal] : [])).forEach(g => len(`${pn} 的 goal`, g, LM.pt.goal));
+    if (p.unsure !== undefined && typeof p.unsure !== "boolean") e(`${pn} 的 unsure 只能是 true 或 false`);
+  });
+  adLintHonest(it, X); adLintDrift(it, X);
+}
+window.__lint = () => {
+  const E = [], W = [], B = [], ids = new Set(ITEMS.map(x => x.id)), LM = AD_LIMITS;
+  const q = s => { const t = adPlain(s).replace(/\s+/g, " ").trim(); return `“${t.length > 30 ? t.slice(0, 30) + "…" : t}”`; };
+  const mk = pre => {
+    const e = m => E.push(pre + m), w = m => W.push(pre + m);
+    /* 新字段里的字：有值就必须是文字；不能写 Markdown 的 **加粗**；纯文字里不能有换行符（页面上会变成空格） */
+    const fmt = (what, s) => { if (s == null || s === "") return false; if (typeof s !== "string") { e(`${what}要是文字（现在是${Array.isArray(s) ? "数组" : typeof s}）`); return false; }
+      if (/\*\*[^*\n]+\*\*/.test(s)) e(`${what}里有 Markdown 的 **加粗**：页面不认，会原样显示星号；要加粗写 <b>…</b>`);
+      if (/\n/.test(s) && !/<\/?[A-Za-z!][^>]*>/.test(s)) e(`${what}里有换行符：页面上会变成空格；要分行写 <br>，分段写 <p>`); return true; };
+    const len = (what, s, lim) => { if (!fmt(what, s)) return; const n = adLen(s); if (n > lim) B.push(`${pre}${what}超过 ${lim} 字（${n} 字）${q(s)}`); };
+    return { e, w, fmt, len };
+  };
+  if (AD_PBRIEF) { const X = mk("BRIEF："); if (AD_PBRIEF.length > LM.page.rows) X.e(`最多 ${LM.page.rows} 行`); AD_PBRIEF.forEach((r, i) => { if (!Array.isArray(r) || r.length < 2) { X.e(`第 ${i + 1} 行要是 [标签, 文字]`); return; } X.len(`第 ${i + 1} 行的标签`, r[0], LM.page.label); X.len(`第 ${i + 1} 行`, r[1], LM.page.text); }); }
+  if (AD_GOALS) { const X = mk("GOALS："); AD_GOALS.forEach((g, i) => { const t = Array.isArray(g) ? g[0] : g; if (typeof t !== "string" || !t) X.e(`第 ${i + 1} 项要是目标名，或 [目标名, 说明]`); else X.len(`第 ${i + 1} 项`, t, LM.pt.goal); }); }
+  /* v3.7.1：沙盘不再悄悄消失。沙盘数据的形状错误；写了 OBJ 就不写 NO_SANDBOX；没有沙盘、也没写理由时提示（几张卡画了结构类的图时点名）；有沙盘却一条连线都没有时提示 */
+  { const X = mk("沙盘："), LS = LM.sandbox;
+    AD_SB_ERR.forEach(m => X.e(m));
+    if (AD_NO_SB !== undefined) { if (HAS_SB) X.e("写了 OBJ（这一轮有沙盘），就不要再写 NO_SANDBOX"); else if (!AD_NO_SB_TEXT) X.e("NO_SANDBOX 要是一句话：这一轮为什么不做沙盘"); else if (!AD_NO_SB_SHOW) X.e("NO_SANDBOX 要写为什么不做沙盘；光写“这一轮没有沙盘”不算理由"); else X.len("NO_SANDBOX", AD_NO_SB, LS.reason); }
+    if (!HAS_SB && AD_NO_SB === undefined) {
+      /* v3.7.1（复审后）：没有沙盘、也没写理由时一律提示；几张卡画了结构类的图时再点名，它们多半就是该放进沙盘的东西 */
+      const hit = ITEMS.filter(it => (Array.isArray(it.vis) ? it.vis : []).some(v => v && AD_STRUCT_VIS.includes(v.type)));
+      X.w(`这一轮没有沙盘，也没写为什么（页面第 2 步只能写“这一页没有写为什么”）。讲结构的一轮（有哪些东西，谁产生、谁修改、谁能看到，怎么流动）要做沙盘：写 OBJ，再写 FLOWS 或 PANO_EDGES 给对象连上线，都不用算坐标，全景 viewAll() 可以不写；一个视角能讲清一张卡的全部上下文时，那张卡用 view 连过去。确实不需要沙盘，就写 const NO_SANDBOX = "理由";，页面会在第 2 步显示它${hit.length >= LS.structural ? `。另外，${hit.length} 张卡画了结构类的图（${hit.map(x => x.id).join("、")} 用了 ${AD_STRUCT_VIS.join(" / ")}），多半就是该放进沙盘的东西` : ""}`);
+    }
+    if (HAS_SB && !EDGES.length) X.w("沙盘里一条连线都没有：每个对象视角都会写“没有上游 / 没有下游”。写 FLOWS（每条流程一张泳道图）或 PANO_EDGES（[[从, 到, 标签], …]）给对象连上线，都不用算坐标");
+  }
+  const VIEWS = window.__views();
+  ITEMS.forEach(it => {
+    const X = mk(`${it.id}：`);
+    try { adLintItem(it, X, ids); } catch (err) { X.e(`检查到一半出错（${err && err.message || err}）：多半是某个字段的形状不对`); }
+    /* v3.7.1：view 写错时“在沙盘里看”按钮不显示，以前没有任何提示 */
+    if (it.view !== undefined) {
+      if (typeof it.view !== "string" || !it.view) X.e(`view 要是沙盘视角的 id，如 "all"、"flow:F2"、"obj:XXX"`);
+      else if (!VIEWS.includes(it.view)) X.w(HAS_SB ? `view 写的“${it.view}”在沙盘里没有，“在沙盘里看”按钮不会显示（有的视角：${VIEWS.slice(0, 8).join("、")}${VIEWS.length > 8 ? " 等" : ""}）` : `写了 view（${it.view}），但这一轮没有沙盘，“在沙盘里看”按钮不会显示`);
+    }
+    const L = AD_LOAD[it.id];
+    if (L && L.error) X.e(`这张卡画不出来：${L.error}`);
+    else if (L) { if (L.prose > L.budget) B.push(`${it.id}：默认看到的字有 ${L.prose} 个，超过这张卡的预算 ${L.budget}（图里的字另算）。写 brief 把段落收进核对材料，只留四格、图和选项；决定要用的事实放不下时拆成两张卡，不要删`); L.visTok.forEach((n, k) => { if (n > LM.vis.text) B.push(`${it.id}：第 ${k + 1} 张显示的图里有 ${n} 个字，超过 ${LM.vis.text}；拆开，或把细节收进参考表`); }); }
+  });
+  return { errors: E, warnings: W, budget: B, mode: AD_BUDGET_MODE, load: window.__load() };
+};
+/* ---- v3.3：名词自动悬浮（每张卡只标第一次出现） ---- */
+/* 每轮可选：TERMS_NOAUTO 列出有歧义、不自动加悬浮的词（如本页里同一个词有别的意思） */
+const AD_TERM_KEYS = Object.keys(AD_DATA.terms).filter(k => !AD_DATA.noauto.includes(k)).sort((a, b) => b.length - a.length);
+const AD_TERM_RE = AD_TERM_KEYS.length ? new RegExp("(" + AD_TERM_KEYS.map(k => k.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|") + ")") : null;
+function adLinkTerms(root) {
+  if (!AD_TERM_RE) return;
+  const used = new Set([...root.querySelectorAll(".term[data-t]")].map(a => a.dataset.t));
+  const skip = "a,button,textarea,svg,script,style,.card-id,.srcb,.pt-n,.no-term";
+  const w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, { acceptNode: n => (n.parentElement && !n.parentElement.closest(skip)) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT });
+  const nodes = []; while (w.nextNode()) nodes.push(w.currentNode);
+  nodes.forEach(n => {
+    let t = n.nodeValue, out = null, guard = 0;
+    while (guard++ < 20) {
+      const re = new RegExp(AD_TERM_RE.source, "g"); let m, hit = null;
+      while ((m = re.exec(t))) { if (!used.has(m[1])) { hit = m; break; } }
+      if (!hit) break;
+      used.add(hit[1]); out = out || document.createDocumentFragment();
+      out.appendChild(document.createTextNode(t.slice(0, hit.index)));
+      const inert = n.parentElement && n.parentElement.closest("label,button,summary");
+      const a = document.createElement(inert ? "span" : "a"); a.className = "term"; a.dataset.t = hit[1]; if (!inert) a.href = "#g-" + encodeURIComponent(hit[1]); a.textContent = hit[1]; out.appendChild(a);
+      t = t.slice(hit.index + hit[1].length);
+    }
+    if (out) { out.appendChild(document.createTextNode(t)); n.parentNode.replaceChild(out, n); }
+  });
+}
+/* ---- v3.4：左侧进度导航（可隐藏，记住选择） ---- */
+const TOC_KEY = `${AD_KEY}-toc-hidden`;
+let TOC_OFF = false; try { TOC_OFF = localStorage.getItem(TOC_KEY) === "1"; } catch (e) {}
+function setTocOff(v) { TOC_OFF = v; try { localStorage.setItem(TOC_KEY, v ? "1" : "0"); } catch (e) {} applyToc(); renderFilters(); }
+function applyToc() { const l = document.querySelector(".items-layout"); if (l) l.classList.toggle("toc-off", TOC_OFF); }
+function nextTodo() { const it = ITEMS.find(x => !S(x.id).status); if (it) jumpToItem(it.id); }
+function renderToc() {
+  const el = document.getElementById("toc"); if (!el) return;
+  let h = "", g = "", done = 0;
+  ITEMS.forEach(it => { const st = S(it.id), s = st.status; if (s) done++;
+    const part = !s && it.kind === "group" && ptDone(it, st) > 0;
+    if (it.group !== g) { g = it.group; h += `<div class="tg">${esc(g)}</div>`; }
+    h += `<a href="#card-${it.id}" onclick="event.preventDefault();jumpToItem('${it.id}')"><span class="dot ${s || (part ? "part" : "")}"></span><span>${esc(it.title)}</span></a>`; });
+  el.innerHTML = `<div class="toc-h"><b>总览</b><button class="toc-x" type="button" onclick="setTocOff(true)" title="隐藏总览，条目区变宽">隐藏 ⟨</button></div><div class="tsum">已表态 ${done} / ${ITEMS.length}</div>${done < ITEMS.length ? `<button class="toc-next" type="button" onclick="nextTodo()">→ 下一个待表态</button>` : ""}` + h;
+}
+function pick(id, k) {
+  const it = ITEMS.find(x => x.id === id), st = S(id);
+  if (it.kind === "multi") { st.multi = st.multi.includes(k) ? st.multi.filter(x => x !== k) : [...st.multi, k]; } else { st.choice = k; st.status = "ok"; }
+  st.how = null; st.howRec = false; save(); renderItems();
+}
+function setStatus(id, k) {
+  const it = ITEMS.find(x => x.id === id), st = S(id);
+  if (k === "ok" && it.kind === "choice" && !st.choice) { const r = recOf(it); if (r.length) st.choice = r[0]; else { showToast("这一条请先选一个选项"); return; } }
+  if (k === "ok" && it.kind === "multi" && !st.multi.length) { const r = recOf(it); if (r.length) st.multi = r; else { showToast("这一条请先勾选至少一项"); return; } }
+  st.status = st.status === k ? null : k; st.how = null; st.howRec = false; save(); renderItems();
+}
+function setComment(id, v) { S(id).comment = v; save(); }
+function noneFits(id) { const st = S(id); st.choice = null; st.status = "tweak"; st.how = null; st.howRec = false; save(); renderItems(); showToast("请在这一条的评论里写你的想法"); }
+function setField(id, f, v) { const st = S(id); st.fields = st.fields || {}; st.fields[f] = v; const any = Object.values(st.fields).some(x => (x || "").trim()); const had = !!st.status; st.status = any ? "ok" : null; save(); if (had !== !!st.status) renderToc(); }
+document.getElementById("overall").value = ST.overall || "";
+document.getElementById("overall").addEventListener("input", e => { ST.overall = e.target.value; save(); });
+function approveAllPending() {
+  let n = 0, skipped = [], nobulk = [];
+  ITEMS.forEach(it => { const st = S(it.id); if (st.status) return; const r = recOf(it);
+    if (it.kind === "group") { if (it.bulk === false) { nobulk.push(it.id); return; } agreeRest(it.id, "all"); n++; return; }
+    if (it.kind === "fill") { skipped.push(it.id); return; }
+    let rec = false;
+    if (it.kind === "choice") { if (!st.choice && !r.length) { skipped.push(it.id); return; } if (!st.choice) { st.choice = r[0]; rec = true; } }
+    if (it.kind === "multi") { if (!st.multi.length && !r.length) { skipped.push(it.id); return; } if (!st.multi.length) { st.multi = r; rec = true; } }
+    st.status = "ok"; st.how = "all"; st.howRec = rec; n++; });   /* 和分组里的点一样标出“全页一键通过”，回来时分得清哪些是自己点的 */
+  save(); renderItems(); showToast(`已按推荐方案通过 ${n} 条（这些条目和分组里的点都标为“全页一键通过”）${skipped.length ? `；${skipped.join("、")} 需要你自己选` : ""}${nobulk.length ? `；${nobulk.join("、")} 要逐点表态，没有填` : ""}`);
+}
+document.getElementById("approveAllBtn").onclick = approveAllPending;
+(() => { const nb = ITEMS.filter(it => it.kind === "group" && it.bulk === false).map(it => it.id); if (nb.length) { const b = document.getElementById("approveAllBtn"); b.textContent = `✅ 一键通过（${nb.join("、")} 除外）`; b.title = `按推荐方案一键通过未填项；${nb.join("、")} 要逐点表态，不填`; } })();
+function renderFilters() {
+  document.getElementById("filters").innerHTML = [["all", "📋 全部条目"], ["choice", "🗳️ 需要选方案的"], ["mine", "✨ 含我的建议"], ["todo", "⏳ 尚未表态"]].map(([k, n]) => `<button class="fbtn ${k === FILTER ? "on" : ""}" type="button" data-f="${k}">${n}</button>`).join("")
+    + `<button class="fbtn ${OPEN_ALL ? "on" : ""}" type="button" data-x="open" onclick="toggleOpenAll()">${OPEN_ALL ? "📕 收起全部说明" : "📖 展开全部说明"}</button>`
+    + `<button class="fbtn toc-tg" type="button" data-x="toc" onclick="setTocOff(!TOC_OFF)">${TOC_OFF ? "☰ 显示总览" : "⟨ 隐藏总览"}</button>`;
+}
+renderFilters(); applyToc();
+document.getElementById("filters").addEventListener("click", e => { const b = e.target.closest(".fbtn"); if (!b || !b.dataset.f) return; FILTER = b.dataset.f; document.querySelectorAll(".fbtn[data-f]").forEach(x => x.classList.toggle("on", x === b)); renderItems(); });
+function jumpToItem(id) {
+  if (FILTER !== "all") { FILTER = "all"; document.querySelectorAll(".fbtn[data-f]").forEach(x => x.classList.toggle("on", x.dataset.f === "all")); renderItems(); }
+  const el = document.getElementById("card-" + id); if (!el) { showToast(`${id} 不在本页`); return; }
+  el.scrollIntoView({ behavior: "smooth", block: "start" }); el.classList.add("flash"); setTimeout(() => el.classList.remove("flash"), 1600);
+  el.setAttribute("tabindex", "-1"); el.focus({ preventScroll: true });
+}
+
+/* ================= 附录 ================= */
+document.getElementById("gloss").innerHTML = Object.entries(AD_DATA.terms).map(([k, [d, ex]]) => `<div class="g" id="g-${k}"><b>${k}</b>${d}${ex ? `<i>${ex}</i>` : ""}</div>`).join("");
+document.getElementById("srcs").innerHTML = Object.entries(AD_DATA.sources).map(([k, [t, d, u]]) => `<div class="s-row" id="src-${k}"><b>${k}</b><div><strong>${t}</strong><br>${d}${u ? `<br><a href="${u}" target="_blank" rel="noopener">${u}</a>` : ""}</div></div>`).join("");
+adShow("gloss-head", Object.keys(AD_DATA.terms).length > 0); adShow("gloss", Object.keys(AD_DATA.terms).length > 0);
+adShow("srcs-wrap", Object.keys(AD_DATA.sources).length > 0);
+
+/* ================= 导出 ================= */
+const SNAME = { ok: "✅ 通过", tweak: "🤔 待微调", bad: "❌ 需修改" };
+const strip = h => String(h == null ? "" : h).replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim();
+function buildMD() {
+  const c = { ok: 0, tweak: 0, bad: 0, none: 0 }; ITEMS.forEach(it => c[S(it.id).status || "none"]++);
+  let md = `# ${ROUND} 反馈 · ${TOPIC}\n\n`;
+  md += `- 提案文件：${AD_REVIEW_PREFIX}${AD_PROPOSAL}\n`
+    + (AD_TURN_DATA ? `- 提案发出轮次：${AD_TURN_P}；反馈对应轮次：${AD_TURN_F}\n` : (AD_TURN_P || AD_TURN_F ? `- 提案发出轮次：${AD_TURN_P || "—"}；反馈对应轮次：${AD_TURN_F || "—"}\n` : ""))
+    + `- 导出时间：${new Date().toISOString()}\n`;
+  md += `- 统计：通过 ${c.ok} / 待微调 ${c.tweak} / 需修改 ${c.bad} / 未表态 ${c.none}（共 ${ITEMS.length}）\n\n`;
+  md += `## 整体意见\n\n${(ST.overall || "").trim() || "（无）"}\n\n## 逐条对照\n`;
+  ITEMS.forEach(it => {
+    const st = S(it.id), rec = recOf(it), nm = k => { const o = (it.opts || []).find(x => x[0] === k); return o ? `${o[0]} ${o[1]}` : k; };
+    md += `\n### ${it.id} ${it.title}〔${KIND[it.kind][1].replace(/^\S+\s+/, "")}〕\n\n`;
+    if (it.kind === "group") {
+      md += `- 分组：${it.group}\n- 来源：${it.from}\n${adMDHead(it)}- 背景：${strip(it.context || "")}\n`;
+      if (it.example) md += `- 举例：${strip(it.example)}\n`;
+      if (it.settled && it.settled.length) md += `- 已定（背景）：${it.settled.map(strip).join("；")}\n`;
+      md += adMDMore(it);
+      md += adMDTables(it);
+      md += `- 逐点：\n`;
+      it.points.forEach((p, i) => { const ps = ptState(st, p.id); md += `  ${i + 1}. ${strip(p.title)}（${(SRCB[p.src] || ["", p.src || "—"])[1]}）${adMDPoint(it, p)}— ${ps.v ? PVN[ps.v] + (ps.how ? `（${HOW[ps.how]}）` : "") : "⏳ 未表态"}${(ps.c || "").trim() ? "：" + ps.c.trim() : ""}\n`; });
+      if (it.bulk === false) md += `- 批量：这一组没有“都同意”，页眉的一键通过也不填这一组\n`;
+      md += `- 状态：${st.status ? SNAME[st.status] : `⏳ 未完成（已表态 ${ptDone(it, st)}/${it.points.length}）`}\n- 评论：${(st.comment || "").trim() || "（无）"}\n`;
+      return;
+    }
+    md += `- 分组：${it.group}\n- 来源：${it.from}\n${adMDHead(it)}- 提案要点：${strip(it.plain || (it.brief && adSlot(it.brief.rec) ? adSlot(it.brief.rec).t : "") || "")}\n`;
+    if (it.kind === "fill") it.fields.forEach(f => { md += `- ${strip(f[1])}：${((st.fields || {})[f[0]] || "").trim() || "（未填）"}\n`; });
+    if (it.evidence) md += `- 依据：${strip(it.evidence)}\n`;
+    md += adMDMore(it);
+    md += adMDTables(it);
+    if (it.opts) {
+      md += `- 选项：${it.opts.map(o => `${o[0]} ${o[1]}${o[3] ? "（推荐）" : ""}`).join("；")}\n${adMDOpts(it)}`;
+      const mine = it.kind === "multi" ? st.multi : (st.choice ? [st.choice] : []);
+      const same = mine.length && rec.length && mine.slice().sort().join() === rec.slice().sort().join();
+      md += `- 你的选择：${mine.length ? mine.map(nm).join("、") : "（未选）"}${st.how === "all" && st.howRec ? "（全页一键通过时按推荐方案填入，不是逐条选的）" : (mine.length && rec.length ? (same ? "（与推荐一致）" : `（推荐为 ${rec.map(nm).join("、")}）`) : "")}\n`;
+    }
+    md += `- 状态：${st.status ? SNAME[st.status] + (st.how === "all" ? "（全页一键通过）" : "") : "⏳ 未表态"}\n- 评论：${(st.comment || "").trim() || "（无）"}\n`;
+  });
+  return md;
+}
+async function copyMarkdownToClipboard() { const t = buildMD(); try { await navigator.clipboard.writeText(t); showToast("已复制 Markdown"); } catch (e) { const p = document.getElementById("md-preview"); p.focus(); p.select(); showToast("浏览器不允许直接复制，已选中预览文本，请按 Ctrl/⌘+C"); } }
+function refreshAll() {
+  const done = ITEMS.filter(it => S(it.id).status).length;
+  document.getElementById("count").textContent = `已表态 ${done}/${ITEMS.length}`;
+  document.getElementById("bar").style.width = (done / ITEMS.length * 100) + "%";
+  const c = { ok: 0, tweak: 0, bad: 0 }; ITEMS.forEach(it => { const s = S(it.id).status; if (s) c[s]++; });
+  document.getElementById("sumcards").innerHTML = [["通过", c.ok], ["待微调", c.tweak], ["需修改", c.bad], ["未表态", ITEMS.length - done]].map(([n, v]) => `<div class="sc"><b>${v}</b><span>${n}</span></div>`).join("");
+  try { document.getElementById("md-preview").value = buildMD(); } catch (err) { document.getElementById("md-preview").value = "导出出错：" + (err && err.message || err) + "（请看 __lint() 的报错）"; console.error(err); }
+  try { adRenderRoute(); } catch (err) { console.error(err); }
+}
+
+function autoGrow(t) { if (!t || t.id === "md-preview") return; t.style.height = "auto"; t.style.height = Math.max(46, t.scrollHeight + 2) + "px"; }
+document.addEventListener("input", e => { if (e.target.tagName === "TEXTAREA") autoGrow(e.target); });
+/*__EXPORT__*/
+document.getElementById("exportBtn").onclick = () => triggerFullExport(false);
+
+/* ================= 初始化：默认文字 → PAGE_TEXT 覆盖 → 代号链接 → 首次渲染 ================= */
+document.getElementById("items-title").textContent = `${ITEMS.length} 个待审批条目`;
+document.getElementById("obj-head").innerHTML = ["name", "layer", "lines", "producer", "editor", "life", "status"].map(k => `<th>${esc(AD_OBJ_LABELS[k])}</th>`).join("");
+document.getElementById("export-lead").innerHTML = `只导出 md。提交后回到对话说“反馈完成”，我会把它保存为 <span class="no-code-link">${esc(AD_REVIEW_PREFIX)}${esc(ROUND)}_${esc(TOPIC)}_feedback.md</span>${AD_TURN_P && AD_TURN_F ? `，并关联到对话轮次 ${esc(AD_TURN_P)}（提案）和 ${esc(AD_TURN_F)}（反馈）` : ""}。`;
+(() => { /* 图例：只列本页用到的卡片类型（cfg 的 LEGEND_CHIPS 可以改写）；有像编号的来源时举第一个为例 */
+  const used = [...new Set(ITEMS.map(it => it.kind))].filter(k => KIND[k]);
+  const chips = (AD_OPT.LEGEND_CHIPS || used.map(k => KIND[k])).map(([c, t]) => `<span class="chip ${esc(c)}">${esc(t)}</span>`).join("");
+  const s0 = Object.keys(AD_DATA.sources).find(k => /^[A-Za-z]+[-_]?\d/.test(k)); /* 只拿像编号的来源举例（如 S-01），没有就不举 */
+  document.getElementById("legend").innerHTML = `条目标签：${chips}；每条都注明来源：“你的描述”是你说过的，“我的建议”需要你同意才算数${s0 ? `，<a class="src" data-s="${esc(s0)}" href="#src-${esc(s0)}">${esc(s0)}</a> 这类编号是来源` : ""}。`;
+})();
+/* v3.7.1：没有沙盘时第 2 步不再去掉：写“这一轮没有沙盘”和 NO_SANDBOX 的理由，没写理由就写“这一页没有写为什么”（__lint() 同时提示） */
+if (!HAS_SB) document.getElementById("howto-2").innerHTML = `<b>2 这一轮没有沙盘</b>${AD_NO_SB_SHOW || "这一页没有写为什么。"}`;
+/* v3.7.1：审批路线挪到了条目一节的开头，第 3 步指过去（PAGE_TEXT 的 howto-3 仍然覆盖它） */
+if (AD_OPT.ROUTE !== false && ITEMS.length >= 2) document.getElementById("howto-3").innerHTML = "<b>3 逐条表态</b>先看条目一节开头的审批路线，再用每张卡上的按钮表态，想法写在评论框里。";
+document.querySelectorAll("main > section.sec:not([hidden]) > .sec-head > .eyebrow").forEach((e, i) => { e.textContent = e.textContent.replace(/^STEP\s*\d+/, "STEP " + i); });
+Object.entries(AD_DATA.text).forEach(([id, html]) => { if (id === "howto-2" && !HAS_SB) return; /* v3.7.1：没有沙盘时第 2 步固定写“这一轮没有沙盘” */ const el = document.getElementById(id); if (el) el.innerHTML = html; });
+document.getElementById("svg").setAttribute("aria-label", document.getElementById("sb-title").textContent.trim() || "信息流图");
+document.querySelectorAll("#howto > div").forEach((d, i) => { const b = d.querySelector(":scope > b"); if (b) b.textContent = b.textContent.replace(/^\s*\d+/, String(i + 1)); });
+(() => { /* v3.7 页面速览：有 BRIEF 时导语原文收进折叠 */
+  const el = document.getElementById("pbrief"); if (!AD_PBRIEF || !el) return;
+  el.innerHTML = AD_PBRIEF.filter(Array.isArray).map(r => `<b class="${r[2] === "hon" ? "hon" : ""}">${r[0]}</b><span>${linkSrc(r[1])}</span>`).join(""); el.hidden = false;
+  const lead = document.getElementById("lead");
+  if (lead && lead.textContent.trim()) { const d = document.createElement("details"); d.className = "lead-fold"; d.innerHTML = `<summary>导语原文（${adMinLabel(adMin(adTok(lead.innerHTML)))}）</summary>`; lead.parentNode.insertBefore(d, lead); d.appendChild(lead); }
+})();
+adMeasureAll();
+["sec-start", "sb-title", "sb-lead", "sec-objs", "items-title", "overall-hint", "gloss", "srcs-wrap", "export-lead"].map(id => document.getElementById(id)).filter(el => el && !el.closest("[hidden]")).forEach(el => adLinkCodes(el));
+if (HAS_SB) { try { setView(AD_DATA.viewAll ? "all" : (AD_DATA.flows.length ? "flow:" + AD_DATA.flows[0].id : "obj:" + Object.keys(AD_DATA.obj)[0])); } catch (err) { console.error(err); AD_SB_ERR.push(`沙盘的第一个视角画不出来（${err && err.message || err}）：多半是 viewAll() 里画了 OBJ 里没有的对象`); } }
+renderItems(); refreshAll(); adRenderCodeIndex(); autoGrow(document.getElementById("overall"));
+</script>

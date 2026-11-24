@@ -1,0 +1,7 @@
+.DS_Store
+node_modules/
+# build outputs and test artefacts written next to a round's cfg/data
+round_template/sample/*_proposal.html
+round_template/sample/*_artifact.html
+round_template/sample/shot_*.png
+round_template/sample/*.txt

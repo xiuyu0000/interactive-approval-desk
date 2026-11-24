@@ -1,0 +1,12 @@
+{
+  "PROJECT": "weekly_report_demo",
+  "ROUND": "R01",
+  "TOPIC": "周报流程",
+  "HEADER": "周报流程改版",
+  "data": "data_r01.js",
+  "codes": "codes.js",
+  "LEAD": "这一轮先定周报的<b>提交、汇总、确认</b>三件事，一共 5 张卡。最需要你细看的是 R01-02（汇总方式）和 R01-04（确认这一关）；R01-05 有三个信息只有你知道。",
+  "REVIEW_DIR": "interview/reviews",
+  "AGENDA_TITLE": "议程：这一轮处理哪些议题",
+  "TCOND_TITLE": "什么时候算改版完成"
+}

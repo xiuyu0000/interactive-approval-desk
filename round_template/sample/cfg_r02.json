@@ -1,0 +1,8 @@
+{
+  "PROJECT": "weekly_report_demo",
+  "ROUND": "R02",
+  "TOPIC": "上线安排",
+  "data": "data_r02.js",
+  "LEAD": "第二轮只有三件事：从哪一周开始试用、试用期间旧流程怎么办，以及确认你在 R01-04 提的调整。",
+  "REVIEW_DIR": "interview/reviews"
+}
