@@ -1,4 +1,4 @@
-// 审批台自检（interactive-approval-desk v3.7.1）
+// 审批台自检（interactive-approval-desk v3.7.2）
 // 用法：在页面所在的文件夹运行
 //   NODE_PATH=<装有 playwright 的 node_modules> node <skill>/round_template/test.js [页面.html | 轮次如 R03] [对象ID]
 // 不给参数时取当前文件夹里修改时间最新的 *_proposal.html；给轮次时在 {轮次}_*_proposal.html（也认旧的 {轮次}_proposal.html）里取最新的。
@@ -12,6 +12,10 @@
 //       v3.7.1：审批路线在条目一节的开头；沙盘的视角画不出来、方框或标签跑出画布、标签的字比标签宽都算不通过；
 //       没有沙盘时“从零看懂”第 2 步一定写“这一轮没有沙盘”（打印出来），写了 NO_SANDBOX 就要显示这句；
 //       __lint() 的报错里有沙盘数据的形状，提示里有：没有沙盘也没写理由、沙盘一条连线都没有、view 写的视角不存在。
+//       v3.7.2：托管模式网络断了或不稳——提交自动重试后送达、一直不通时如实说没提交成功并在原地给出再试 / 另存 / 复制（不下载）、
+//       数据库不回应时不另发写入（同一文档同时最多一笔）、草稿自动补存并在提交区提前提醒、反馈超过 256 KiB 直接说明、
+//       打开时读草稿迟到照样接上、别处有更新的草稿时不提交旧回答、再提交没成功时说明数据库里是旧版本、提交途中改了回答要提醒、
+//       revoked 不解释权限、回答超过 256 KiB 时草稿不发；托管模式的提交按钮不写“导出”，本地文件里写“导出 md”。
 //       任何一项不通过，退出码为 1。cfg 的 BUDGET 为 "warn" 时，字数和读得清只提示（只用于重建 v3.7 之前的旧轮次）。截图写在当前文件夹（shot_*.png）。
 const { chromium } = require('playwright');
 const fs = require('fs'), path = require('path'), { pathToFileURL } = require('url');
@@ -279,6 +283,174 @@ function findPage(arg) {
     console.log('托管模式：连不上数据库时', failMsg.slice(0, 40), '| 下载', dl0.length);
     check(/没有提交成功/.test(failMsg) && dl0.length === 0, '连不上数据库时没有如实提示，或者仍在下载');
     await p.close();
+    // 2f–2q) v3.7.2 网络断了或不稳：数据库调用失败（unavailable）或迟迟不回应。等待时长用 window.__AD_TIMING 缩短（只给自检用）
+    // opt：{feedback / drafts: 头几次写入失败的次数或 'all', hang: 失败改成一直不回应, code: 失败时的错误码, readDelay: 读要多久,
+    //       setDelay: 写反馈要多久, seed: 数据库里预先有的文档}；window.__heal = true 表示网络恢复，window.__down = true 表示网络断开
+    const flaky = opt => {
+      window.__AD_TIMING = { draftDelayMs: 120, attemptMs: 300, draftReadMs: 300, quickRetryMs: 30, submitDelaysMs: [80, 80, 80], submitWaitMs: 1200, draftRetryMs: [150, 150] };
+      window.__db = opt.seed ? JSON.parse(JSON.stringify(opt.seed)) : {}; window.__saves = []; window.__calls = {}; window.__heal = false; window.__down = false;
+      window.__inflight = {}; window.__maxInflight = 0;
+      const sleep = ms => new Promise(r => setTimeout(r, ms));
+      const db = { doc: path => ({
+        get: async () => { if (opt.readDelay) await sleep(opt.readDelay); return { exists: path in window.__db, data: () => path in window.__db ? JSON.parse(JSON.stringify(window.__db[path])) : undefined }; },
+        set: async v => {
+          const kind = path.split('/')[0]; window.__calls[kind] = (window.__calls[kind] || 0) + 1;
+          window.__inflight[path] = (window.__inflight[path] || 0) + 1; window.__maxInflight = Math.max(window.__maxInflight, window.__inflight[path]);
+          try {
+            const fail = window.__down || (!window.__heal && (opt[kind] === 'all' || window.__calls[kind] <= (opt[kind] || 0)));
+            if (fail && opt.hang) await new Promise(() => {});
+            if (opt.setDelay && kind === 'feedback') await sleep(opt.setDelay);
+            if (fail) throw { code: opt.code || 'unavailable', message: 'network down (test)' };
+            window.__db[path] = JSON.parse(JSON.stringify(v));
+          } finally { window.__inflight[path]--; }
+        } }) };
+      const downloads = { save: async r => { window.__saves.push(r.filename); return { status: 'saved' }; } };
+      window.claude = { use: n => new Promise(res => setTimeout(() => res(n === 'db' ? db : n === 'downloads' ? downloads : null), 50)) };
+    };
+    const netView = q => q.evaluate(r => ({ target: (document.getElementById('save-target') || {}).textContent || '', draft: (document.getElementById('draft-state') || {}).textContent || '', btn: document.getElementById('exportBtn').textContent, calls: window.__calls, fb: window.__db['feedback/' + r] || null, dr: window.__db['drafts/' + r] || null, saves: window.__saves.slice(), maxInflight: window.__maxInflight, overall: document.getElementById('overall').value }), round);
+    let nv;
+    // 2f) 提交头两次连不上：自动重试后送达，状态行说重试了几次；托管模式的提交按钮不写“导出”
+    p = await b.newPage();
+    await p.addInitScript(flaky, { feedback: 2 });
+    await noFonts(p); await p.goto(url); await p.waitForTimeout(500);
+    await p.click('#exportBtn'); await p.waitForTimeout(900);
+    nv = await netView(p);
+    console.log('网络不稳（提交头两次失败）：', nv.fb ? '送达' : '没送达', `| 写了 ${nv.calls.feedback || 0} 次 |`, nv.target.slice(0, 36), '| 按钮', nv.btn);
+    check(nv.fb && nv.calls.feedback === 3 && /已提交/.test(nv.target) && /重试 2 次/.test(nv.target), '网络不稳时提交没有自动重试送达（或者状态行没说重试了几次）');
+    check(!/导出/.test(nv.btn), `托管模式的提交按钮仍写着“导出”（${nv.btn}）`);
+    await p.close();
+    // 2g) 一直连不上：重试完如实说没提交成功，原地给出再试、另存、复制，不下载；原地的另存走 downloads；网络恢复后点“再试一次”送达
+    p = await b.newPage({ acceptDownloads: true });
+    await p.addInitScript(flaky, { feedback: 'all' });
+    await noFonts(p); await p.goto(url); await p.waitForTimeout(500);
+    const dlNet = []; p.on('download', d => dlNet.push(d.suggestedFilename()));
+    await p.click('#exportBtn'); await p.waitForTimeout(1000);
+    nv = await netView(p);
+    const panelBtns = await p.evaluate(() => [...document.querySelectorAll('#save-target button')].map(x => x.textContent));
+    console.log('网络一直不通：', nv.target.slice(0, 44), '| 原地按钮', panelBtns.join('、'), `| 写了 ${nv.calls.feedback || 0} 次 | 下载 ${dlNet.length}`);
+    check(/没有提交成功/.test(nv.target) && !nv.fb && nv.calls.feedback === 4 && dlNet.length === 0, '网络一直不通时没有重试 3 次后如实说没提交成功，或者下载了文件');
+    check(['再试一次', '另存', '复制'].every(k => panelBtns.some(t => t.includes(k))), '没提交成功时没有在原地给出“再试一次”“另存”“复制”');
+    await p.locator('#save-target button', { hasText: '另存' }).click(); await p.waitForTimeout(300);
+    nv = await netView(p);
+    check(nv.saves.length === 1 && /_feedback\.md$/.test(nv.saves[0]), '没提交成功时原地的“另存”没有走 downloads');
+    await p.evaluate(() => { window.__heal = true; });
+    await p.locator('#save-target button', { hasText: '再试一次' }).click(); await p.waitForTimeout(500);
+    nv = await netView(p);
+    console.log('网络恢复后点“再试一次”：', nv.fb ? '送达' : '没送达', '|', nv.target.slice(0, 20));
+    check(nv.fb && /已提交/.test(nv.target), '网络恢复后点“再试一次提交”没有送达');
+    await p.close();
+    // 2h) 数据库一直不回应（请求挂住）：不另发一笔（同一文档同时只有一笔写入），等够 submitWaitMs 才如实说明；再点“再试一次”也只排在后面
+    p = await b.newPage();
+    await p.addInitScript(flaky, { feedback: 'all', hang: true });
+    await noFonts(p); await p.goto(url); await p.waitForTimeout(500);
+    await p.click('#exportBtn'); await p.waitForTimeout(600);
+    nv = await netView(p);
+    const slowText = nv.target;
+    await p.waitForTimeout(1100);
+    nv = await netView(p);
+    console.log('数据库一直不回应：', slowText.slice(0, 24), '→', nv.target.slice(0, 40), `| 写了 ${nv.calls.feedback || 0} 次，同时最多 ${nv.maxInflight} 笔`);
+    check(/接着等/.test(slowText) && /没有提交成功/.test(nv.target) && /没有回应/.test(nv.target), '数据库一直不回应时没有先说在接着等、最后如实说明');
+    check(nv.calls.feedback === 1 && nv.maxInflight === 1, `数据库不回应时又另发了写入（写了 ${nv.calls.feedback} 次，同时最多 ${nv.maxInflight} 笔）`);
+    await p.locator('#save-target button', { hasText: '再试一次' }).click(); await p.waitForTimeout(300);
+    nv = await netView(p);
+    check(nv.calls.feedback === 1 && nv.maxInflight === 1, '点“再试一次”时前一笔还没落地，却又同时发了一笔写入');
+    await p.close();
+    // 2i) 存草稿时连不上：不用再表态也会自动补存；连续两次没存上就在提交区提前提醒；网络恢复后补存成功、提醒消失
+    p = await b.newPage();
+    await p.addInitScript(flaky, { drafts: 'all' });
+    await noFonts(p); await p.goto(url); await p.waitForTimeout(500);
+    await p.click('#approveAllBtn'); await p.waitForTimeout(1000);
+    nv = await netView(p);
+    console.log('存草稿时连不上：', nv.draft, '|', nv.target.slice(0, 20), `| 写了 ${nv.calls.drafts || 0} 次，同时最多 ${nv.maxInflight} 笔`);
+    check(/自动再存/.test(nv.draft) && /草稿暂时存不上/.test(nv.target) && /自动再试/.test(nv.target) && !nv.dr, '草稿没存上时没有自动补存的提示，或者提交区没有提前提醒');
+    check(nv.maxInflight <= 1, `存草稿时同一文档同时有 ${nv.maxInflight} 笔写入`);
+    await p.evaluate(() => { window.__heal = true; });
+    await p.waitForTimeout(800);
+    nv = await netView(p);
+    console.log('网络恢复后：', nv.draft, '|', nv.target.slice(0, 20));
+    check(nv.dr && /草稿已存/.test(nv.draft) && !/草稿暂时存不上/.test(nv.target), '网络恢复后草稿没有自动补存，或者提前提醒没有消失');
+    await p.close();
+    // 2j) 反馈超过数据库单条 256 KiB 的上限：不写数据库，直接说明并给出另存
+    p = await b.newPage();
+    await p.addInitScript(flaky, {});
+    await noFonts(p); await p.goto(url); await p.waitForTimeout(500);
+    await p.evaluate(() => { const big = '字'.repeat(90000); window.buildMD = () => '# 很长的反馈\n' + big; });
+    await p.click('#exportBtn'); await p.waitForTimeout(400);
+    nv = await netView(p);
+    console.log('反馈超过 256 KiB：', nv.target.slice(0, 44), `| 写了 ${nv.calls.feedback || 0} 次`);
+    check(/没有提交成功/.test(nv.target) && /256 KiB/.test(nv.target) && !nv.calls.feedback, '反馈超过 256 KiB 时没有直接说明，或者仍然写了数据库');
+    await p.close();
+    // 2k) 打开时读草稿迟迟没回应：先放开作答；那一次读迟到的结果照样接上（别的设备存的更新草稿，审批人还没在这台设备上答）
+    p = await b.newPage();
+    await p.addInitScript(flaky, { seed: seedDraft(probe.key, 7, '设备B'), readDelay: 600 });
+    await noFonts(p); await p.goto(url); await p.waitForTimeout(400);
+    const openGate = await readBack(p);
+    await p.waitForTimeout(600);
+    nv = await netView(p);
+    console.log('读草稿迟到：', openGate.inert ? '作答区还锁着' : '作答区已放开', '|', openGate.state, '→', nv.draft, '|', nv.overall);
+    check(!openGate.inert && /草稿暂时读不到/.test(openGate.state) && nv.overall === '设备B（整体意见）', '读草稿迟迟没回应时没有先放开作答，或者迟到的草稿没有接上');
+    await p.close();
+    // 2l) 读草稿迟到、审批人已在这台设备上答过，别处的草稿更新：不提交这台设备上的旧回答，让审批人选；换成那份草稿后再提交
+    p = await b.newPage();
+    await p.addInitScript(flaky, { seed: seedDraft(probe.key, 7, '设备B'), readDelay: 600 });
+    await noFonts(p); await p.goto(url); await p.waitForTimeout(450);
+    await p.click('#approveAllBtn'); await p.waitForTimeout(500);
+    await p.click('#exportBtn'); await p.waitForTimeout(300);
+    nv = await netView(p);
+    const newerBtns = await p.evaluate(() => [...document.querySelectorAll('#save-target button')].map(x => x.textContent));
+    console.log('别处有更新的草稿时点提交：', nv.target.slice(0, 36), '| 原地按钮', newerBtns.join('、'), `| 反馈 ${nv.fb ? '写了' : '没写'}`);
+    check(!nv.fb && /还没提交/.test(nv.target) && newerBtns.some(t => t.includes('换成那份草稿')) && newerBtns.some(t => t.includes('仍然提交')), '别处有更新的草稿时仍然提交了这台设备上的旧回答，或者没有让审批人选');
+    await p.locator('#save-target button', { hasText: '换成那份草稿' }).click(); await p.waitForTimeout(300);
+    await p.click('#exportBtn'); await p.waitForTimeout(500);
+    nv = await netView(p);
+    check(nv.fb && /设备B/.test(nv.fb.md) && /已提交/.test(nv.target), '换成别处的草稿后再提交，提交的不是那份草稿的回答');
+    await p.close();
+    // 2m) 之前提交成功、改了回答、再提交时网络断了：如实说数据库里还是上次的旧版本，另存的这份更新
+    p = await b.newPage();
+    await p.addInitScript(flaky, {});
+    await noFonts(p); await p.goto(url); await p.waitForTimeout(500);
+    await p.click('#exportBtn'); await p.waitForTimeout(400);
+    await p.click('#approveAllBtn'); await p.waitForTimeout(300);
+    const changedText = (await netView(p)).target;
+    await p.evaluate(() => { window.__down = true; });
+    await p.click('#exportBtn'); await p.waitForTimeout(1000);
+    nv = await netView(p);
+    console.log('再提交没成功：', changedText.slice(0, 20), '→', nv.target.slice(0, 60));
+    check(/又改过回答/.test(changedText) && /没有提交成功/.test(nv.target) && /旧版本/.test(nv.target), '再提交没成功时没有说明数据库里还是上次的旧版本');
+    await p.close();
+    // 2n) 提交途中又改了回答：送达后提醒再提交一次
+    p = await b.newPage();
+    await p.addInitScript(flaky, { setDelay: 500 });
+    await noFonts(p); await p.goto(url); await p.waitForTimeout(500);
+    await p.click('#exportBtn'); await p.waitForTimeout(150);
+    await p.click('#approveAllBtn'); await p.waitForTimeout(700);
+    nv = await netView(p);
+    console.log('提交途中改了回答：', nv.target.slice(0, 50));
+    check(/已提交/.test(nv.target) && /又改过回答/.test(nv.target), '提交途中改了回答，送达后没有提醒再提交一次');
+    await p.close();
+    // 2o) 草稿写入被 revoked 拒绝：停止存草稿、说提交不会成功，但不解释是什么权限（契约：不替外层解释）
+    p = await b.newPage();
+    await p.addInitScript(flaky, { drafts: 'all', code: 'revoked' });
+    await noFonts(p); await p.goto(url); await p.waitForTimeout(500);
+    await p.click('#approveAllBtn'); await p.waitForTimeout(600);
+    nv = await netView(p);
+    console.log('草稿被 revoked：', nv.draft, '|', nv.target.slice(0, 40));
+    check(/草稿存不了/.test(nv.draft) && /不会成功/.test(nv.target) && !/查看权限/.test(nv.target), 'revoked 时没有停止存草稿，或者解释了权限原因');
+    await p.close();
+    // 2p) 回答本身就超过单条 256 KiB：草稿不发（免得被当成没有写权限），改短后照常存
+    p = await b.newPage();
+    await p.addInitScript(flaky, {});
+    await noFonts(p); await p.goto(url); await p.waitForTimeout(500);
+    await p.evaluate(() => { ST.overall = '字'.repeat(90000); save(); });
+    await p.waitForTimeout(500);
+    nv = await netView(p);
+    console.log('回答超过 256 KiB：', nv.draft.slice(0, 30), `| 草稿写了 ${nv.calls.drafts || 0} 次 |`, nv.target.slice(0, 30));
+    check(!nv.calls.drafts && /256 KiB/.test(nv.draft) && !/查看权限/.test(nv.target), '回答超过 256 KiB 时仍然发了草稿，或者被说成没有写权限');
+    await p.evaluate(() => { ST.overall = '短'; save(); });
+    await p.waitForTimeout(500);
+    nv = await netView(p);
+    check(nv.dr && /草稿已存/.test(nv.draft), '回答改短后草稿没有照常存');
+    await p.close();
 
     // 3) 本地模式：File System Access API 只写一个 md
     p = await b.newPage();
@@ -287,6 +459,8 @@ function findPage(arg) {
       window.showDirectoryPicker = async () => ({ name: (typeof EXPORT_CFG !== 'undefined' ? EXPORT_CFG.expectedDirName : 'reviews'), queryPermission: async () => 'granted', requestPermission: async () => 'granted', getFileHandle: async n => ({ createWritable: async () => ({ write: async t => window.__w.push([n, t.length]), close: async () => {} }) }) });
     });
     await noFonts(p); await p.goto(url); await p.waitForTimeout(400);
+    const localLabel = await p.evaluate(() => document.getElementById('exportBtn').textContent);
+    check(/导出 md/.test(localLabel), `本地模式的提交按钮应写“导出 md”（${localLabel}）`);
     await p.click('#exportBtn'); await p.waitForTimeout(400);
     const w = await p.evaluate(() => window.__w);
     console.log('本地模式：写入', JSON.stringify(w));
